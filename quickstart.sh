@@ -8,6 +8,14 @@ say() { printf '\n\033[1m== %s ==\033[0m\n' "$*"; }
 
 say "turboquant-101"
 command -v python3 >/dev/null || { echo "python3 is required"; exit 1; }
+# Python >= 3.10 required: the CUDA path (vLLM) needs it, and macOS's
+# system /usr/bin/python3 (3.9) pairs with NumPy 2.x in ways that spew
+# spurious warnings through the CPU demo. On macOS: brew install python@3.12
+if ! python3 -c 'import sys; sys.exit(0 if sys.version_info >= (3, 10) else 1)'; then
+  echo "python3 >= 3.10 is required (found: $(python3 -V 2>&1))."
+  echo "macOS: brew install python@3.12   Ubuntu: apt install python3.10-venv"
+  exit 1
+fi
 
 # ---- 1. venv + base deps (numpy for the CPU demo) -------------------------
 if [ ! -d .venv ]; then

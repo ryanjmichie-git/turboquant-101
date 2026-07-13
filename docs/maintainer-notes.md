@@ -5,11 +5,13 @@ everything below the GPU line is written against documented behavior and
 needs one pass on real hardware before the repo is shared publicly. Work
 through this list on the RTX 5080 and the M4.
 
-> **Status 2026-07-12:** the CUDA/vLLM section (items 1-5) and the
-> both-platforms section (items 10-11) were validated on the RTX 5080 --
+> **Status 2026-07-13:** the CUDA/vLLM section (items 1-5) and the
+> both-platforms section (items 10-11) were validated on the RTX 5080
+> (2026-07-12), and the Apple Silicon section (items 6-8) got a first
+> pass on the Mac mini M4 (2026-07-13, via an independent agent run) --
 > see `VALIDATION_REPORT.md` in the repo root for the full evidence.
-> Inline `RESOLVED` notes below summarize each outcome. The Apple Silicon
-> section (items 6-9) has NOT been validated yet.
+> Inline `RESOLVED` notes below summarize each outcome. Item 9 (fork
+> path) and the full Mac A/B benchmark remain open.
 
 ## CUDA / vLLM (RTX 5080, WSL2)
 
@@ -81,11 +83,29 @@ through this list on the RTX 5080 and the M4.
    resolves and downloads on current brew llama.cpp. Fallbacks if not:
    the unsloth or bartowski Qwen3-4B GGUF repos; update quickstart.sh
    and verify.py's `HF_GGUF` default.
+
+   > RESOLVED: resolves and downloads (2.32 GiB) on brew llama.cpp
+   > build 9960, Mac mini M4 / macOS 15.7.4. No fallback needed.
 7. **KV log patterns.** Run verify.py --backend llamacpp and check the
    KV MiB lines match `LLAMACPP_KV_PATTERNS`; add your build's format if
    not.
+
+   > RESOLVED (two bugs found): (a) current builds hide the KV lines at
+   > default log level entirely -- verify.py now passes `-lv 4` to the
+   > server; (b) the old flat sum matched both the "KV self size" total
+   > AND its same-line K/V components, reporting exactly 2x the true MiB
+   > (ratios survived only by symmetric luck) -- patterns are now
+   > categorized and the first matching category wins. Measured on the
+   > M4 at 8K ctx: f16 1,152 MiB; q8_0 612 MiB (1.88x); q4_0 324 MiB
+   > (3.56x) -- f16 confirms 144 KiB/token exactly, and the ratios match
+   > this doc's ~1.9x / ~3.6x claims.
 8. **Thinking mode.** Spot-check demo outputs for `<think>` leakage with
    the `/no_think` suffix on the current server build.
+
+   > MOSTLY RESOLVED: the q8_0 demo scored 5/5 exact-match on the M4
+   > (build 9960), which implies `/no_think` worked -- but the raw
+   > outputs were not explicitly grepped for `<think>`; do that check
+   > when running the full Mac A/B benchmark.
 9. **(Optional) Fork path.** If you want real TurboQuant numbers on
    Metal, test the TheTom fork prebuilds (>= the PR #200 Metal fix) and
    add measured results to docs/apple-silicon.md, clearly labeled as

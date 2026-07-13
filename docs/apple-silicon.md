@@ -76,10 +76,17 @@ rather than extrapolate.
 
 ## Gotchas
 
+* **KV size lines are hidden at the default log level.** Current
+  llama.cpp builds (verified on build 9960) only print the KV buffer
+  allocation lines at raised verbosity, which used to make verify.py
+  report "could not find KV buffer size lines". verify.py now passes
+  `-lv 4` to the server automatically; add it yourself if you run
+  llama-server by hand and want to see the sizes.
 * **First run downloads the model.** `-hf Qwen/Qwen3-4B-GGUF:Q4_K_M`
-  pulls ~2.5 GB into your HF cache. If that repo/tag doesn't resolve on
-  your llama.cpp version, download a Qwen3-4B GGUF manually and pass
-  `-m /path/to/model.gguf` (and `--gguf` to verify.py).
+  pulls ~2.5 GB into your HF cache (confirmed resolving on brew
+  llama.cpp build 9960; 2.32 GiB download). If that repo/tag doesn't
+  resolve on your llama.cpp version, download a Qwen3-4B GGUF manually
+  and pass `-m /path/to/model.gguf` (and `--gguf` to verify.py).
 * **Qwen3 thinking mode.** The scripts append `/no_think`; if you drive
   the server yourself and answers start with `<think>`, that's why.
 * **Cache type names drift.** `llama-server --help | grep cache-type`

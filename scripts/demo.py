@@ -43,9 +43,12 @@ def main():
         res = backend.generate(prompt)
         ok = score(res.text, t.needle)
         hits += ok
+        # Whole-request rate (prefill included) -- a sanity number for the
+        # ~10-token answers here, NOT a decode-speed figure. The benchmark's
+        # decode probe measures actual decode rate (niah/backends.py).
         speed = res.gen_tokens / res.seconds if res.seconds > 0 else 0
         print(f"  {'FOUND ' if ok else 'MISSED'}  expected {t.needle:<18} "
-              f"got: {res.text.strip()[:40]!r}  ({speed:.0f} tok/s decode)")
+              f"got: {res.text.strip()[:40]!r}  ({speed:.1f} tok/s end-to-end)")
 
     print(f"\n  Retrieved {hits}/5.")
     if hits == 5:

@@ -16,6 +16,7 @@ Reference protocol (from the known-good RTX 5080 run):
 from __future__ import annotations
 
 import random
+import zlib
 from dataclasses import dataclass
 
 # Distinctive, easy-to-spot words for needle codes like GOLDFINCH-9241.
@@ -93,8 +94,13 @@ def build_prompt(
     and the extra reps would measure nothing.
     """
     filler_target = trial.context_tokens - reserve_tokens
-    # Deterministic jitter per (needle, depth, rep) so runs are reproducible.
-    rng = random.Random(hash((trial.needle, trial.depth_pct, trial.rep)) & 0xFFFF)
+    # Deterministic jitter per (needle, depth, rep) so runs are reproducible
+    # -- across PROCESSES too: the baseline and compressed conditions run as
+    # separate invocations and must see the same documents. Python's builtin
+    # hash() is salted per process (PYTHONHASHSEED) and silently broke that
+    # guarantee; zlib.crc32 is stable everywhere.
+    key = f"{trial.needle}|{trial.depth_pct}|{trial.rep}".encode()
+    rng = random.Random(zlib.crc32(key) & 0xFFFF)
     max_offset = max(0, len(corpus) - filler_target * 5)
     offset = rng.randint(0, max_offset) if max_offset > 0 else 0
     filler = _fit_to_tokens(corpus[offset:], filler_target, count_tokens)

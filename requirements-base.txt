@@ -1,3 +1,5 @@
-# Needed on every platform (CPU demo + talking to a llama.cpp server)
+# Needed on every platform (CPU demo + talking to a llama.cpp server).
+# Python >= 3.10 required (quickstart.sh enforces this): macOS's system
+# python3 is 3.9 and produces spurious NumPy 2.x warnings in the demo.
 numpy>=1.26
 requests>=2.31

@@ -1,8 +1,11 @@
 # Hardware validation report — turboquant-101
 
-**Date:** 2026-07-12 · **Scope:** Phase 0 (census), Phase 1 (CPU demo),
-Phase 2 (CUDA/vLLM path). Phase 3 (Apple Silicon / llama.cpp) was **not
-run** — this is the CUDA machine; Q7/Q8 remain open for the M4 pass.
+**Date:** 2026-07-12 (CUDA pass), updated 2026-07-13 (Apple Silicon
+pass) · **Scope:** Phase 0 (census), Phase 1 (CPU demo), Phase 2
+(CUDA/vLLM path) run directly on the RTX 5080 machine; Phase 3 (Apple
+Silicon / llama.cpp) executed 2026-07-13 on a Mac mini M4 by an
+independent agent run against the published repo (commit `ab9bed8`) —
+its findings are folded in below (§3 Q7/Q8, §8).
 
 **Verdict:** the repo's core claims survive on real hardware — verify.py
 PASSES (3.16x), retrieval is 60/60 in both conditions, and the decode
@@ -172,11 +175,32 @@ A worked example with these numbers was added to LEARN.md §1. The naive
 "288 KiB → can't fit 45K on 16 GB" tension that motivated note #10
 disappears once the factor-2 slip is fixed.
 
-### Q7 / Q8 — Apple Silicon (GGUF resolution, KV log patterns)
+### Q7 — does `-hf Qwen/Qwen3-4B-GGUF:Q4_K_M` resolve?
 
-**Not validated** — this pass ran on the CUDA machine; llama.cpp/M4 items
-(maintainer notes 6–9, quickstart mac path, `/no_think` on llama-server)
-remain open. No guesses recorded.
+**Yes.** Confirmed on brew llama.cpp build 9960 (Mac mini M4, 16 GB,
+macOS 15.7.4): the tag resolves and downloads 2.32 GiB. No
+unsloth/bartowski fallback needed; `HF_GGUF` unchanged.
+
+### Q8 — which `LLAMACPP_KV_PATTERNS` regex matched?
+
+The patterns were fine — **the lines weren't there**: current llama.cpp
+builds only print KV allocation lines at raised log verbosity, so as
+published, verify.py found nothing and quickstart's `set -e` aborted at
+the verification step. Fixed: the probe now passes `-lv 4` to
+llama-server. A second bug surfaced once lines were visible: the flat
+sum matched both the "KV self size" total *and* its same-line K/V
+component figures, so displayed MiB was exactly 2× reality (ratios
+survived only because the doubling was symmetric). Fixed: patterns are
+now grouped into priority-ordered categories (buffer-size lines → self
+size → K/V components) and only the first matching category is summed.
+
+Measured on the M4 at 8K context: **f16 1,152 MiB · q8_0 612 MiB (1.88×)
+· q4_0 324 MiB (3.56×)** — the f16 figure confirms 144 KiB/token exactly
+(8,192 × 144 KiB = 1,152 MiB), and the ratios match the ~1.9×/~3.6×
+claims in docs/apple-silicon.md. The q8_0 five-needle demo scored 5/5
+exact matches (implying `/no_think` worked on this build; an explicit
+`<think>` grep of raw outputs is still recommended when the full Mac A/B
+benchmark is run). Raw decode on the M4: ~21–26 tok/s.
 
 ## 4. Benchmark results (validated run)
 
@@ -272,6 +296,59 @@ Max-context and capacity numbers: §3 Q5.
     outcomes; items 6–9 explicitly marked not-yet-validated.
 12. **VALIDATION_REPORT.md** — this file.
 
+Added 2026-07-13 after the M4 pass (fixes for the five findings of the
+independent Mac agent run):
+
+13. **scripts/verify.py** — llama.cpp probe passes `-lv 4` (KV lines are
+    hidden at default verbosity on current builds — this is what broke
+    quickstart on the Mac); KV patterns regrouped into priority-ordered
+    categories with first-match-wins summation (the old flat sum
+    double-counted the "KV self size" total plus its same-line K/V
+    components — displayed MiB was exactly 2× reality).
+14. **niah/protocol.py** — jitter seed switched from Python's salted
+    builtin `hash()` to `zlib.crc32`. *Why:* `hash()` randomizes per
+    process, so the baseline and compressed benchmark invocations
+    silently received different haystack documents — the docstring's
+    reproducibility claim was false, weakening the A/B pairing. (Trial
+    *documents* change relative to earlier runs; retrieval results were
+    60/60 on both protocols.)
+15. **scripts/demo.py** — per-trial rate relabeled "tok/s end-to-end"
+    with one decimal (it printed "0 tok/s" on the M4's 32-second
+    requests) and a comment pointing at the real decode probe.
+16. **quickstart.sh** — enforces Python ≥ 3.10 with a friendly message.
+    *Why:* macOS's system python3 is 3.9, which pairs with NumPy 2.x to
+    spew spurious warnings through the CPU demo; the CUDA path needs
+    ≥3.10 regardless.
+17. **requirements-base.txt** — comment documenting the Python floor.
+18. **docs/apple-silicon.md** — new gotcha for the log-verbosity
+    behavior; model-resolution gotcha updated with the confirmed build
+    9960 result.
+19. **docs/maintainer-notes.md** — items 6–8 annotated RESOLVED with M4
+    measurements; status preamble updated.
+
+## 8. Second-pass validation (Mac mini M4, 2026-07-13)
+
+An independent agent run (OpenAI Codex on the owner's Mac mini M4,
+16 GB, macOS 15.7.4) cloned the published repo at commit `ab9bed8`,
+executed the Apple Silicon path, and cross-validated the CPU demo. Key
+outcomes:
+
+- **CPU demo replicated**: 98.6% → 82.8% naive → 98.2% rotated, matching
+  the CUDA-machine run digit-for-digit.
+- **KV math independently confirmed**: f16 KV at 8K context measured
+  1,152 MiB — exactly the corrected 144 KiB/token, on different
+  hardware and a different inference engine.
+- **Docs ratios confirmed**: q8_0 1.88× and q4_0 3.56× vs the claimed
+  ~1.9× and ~3.6×.
+- **Five genuine defects found** (all fixed above, items 13–17): the
+  quickstart-breaking log-verbosity change, the 2× KV MiB
+  double-count, the non-reproducible `hash()` jitter (also affects the
+  CUDA benchmark's trial pairing), the mislabeled demo "decode" rate,
+  and the Python 3.9/NumPy 2 warning storm.
+- **Still open**: the full Mac A/B benchmark (`mac-f16-kv` vs
+  `mac-q4_0-kv` labels) and an explicit `<think>` grep of raw outputs;
+  the optional TheTom-fork path (item 9).
+
 ## 6. Docs claims contradicted by measured reality
 
 Fixed (unambiguous):
@@ -299,10 +376,11 @@ FP8-first/avoid-k3v4_nc guidance.
 
 ## 7. Remaining risks for publishing
 
-1. **Apple Silicon path is entirely unvalidated** (Q7/Q8, maintainer
-   notes 6–9, quickstart mac branch, `LLAMACPP_KV_PATTERNS`, the
-   `-hf Qwen/Qwen3-4B-GGUF:Q4_K_M` resolution, the TheTom-fork story).
-   Run the M4 pass before publishing, or mark the mac path as untested.
+1. **Apple Silicon path now has a first pass** (see §8) but the fixed
+   quickstart/verify flow has not itself been re-run end-to-end on the
+   M4, the full Mac A/B benchmark is still outstanding, and the
+   TheTom-fork story (maintainer note 9) remains untested. One more
+   clean `./quickstart.sh` run on the Mac would close this.
 2. **The vLLM environment is fragile across versions.** Three of the
    four startup blockers found here are vLLM/dependency packaging issues
    (torchcodec, UVA-on-WSL2, FlashInfer JIT) that may appear, disappear,

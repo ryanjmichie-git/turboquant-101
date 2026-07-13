@@ -229,15 +229,22 @@ def verify_vllm(args) -> int:
 # ==========================================================================
 # llama.cpp path
 # ==========================================================================
-# llama.cpp prints its KV buffer sizes at startup. Formats drift between
-# versions, so we try several patterns and sum every KV-related MiB figure
-# we find. If none match on your build, run llama-server by hand, find the
-# KV size lines, and add a pattern here.
+# llama.cpp prints its KV buffer sizes at startup (only at raised log
+# verbosity on current builds -- the probe passes -lv 4 for this). Formats
+# drift between versions, so we know several patterns, grouped into
+# priority-ordered categories; the FIRST category with any matches is used
+# ALONE. Never sum across categories: the "KV self size" summary line
+# repeats the K/V component sizes on the same line, so a flat sum
+# double-counts (reported MiB came out exactly 2x on real M4 logs).
+# If nothing matches on your build, run llama-server by hand with -lv 4,
+# find the KV size lines, and add a pattern here.
 LLAMACPP_KV_PATTERNS = [
-    re.compile(r"KV buffer size\s*=\s*([\d.]+)\s*MiB"),
-    re.compile(r"KV self size\s*=\s*([\d.]+)\s*MiB"),
-    re.compile(r"K \(\w+\):\s*([\d.]+)\s*MiB"),
-    re.compile(r"V \(\w+\):\s*([\d.]+)\s*MiB"),
+    # per-backend allocation lines: "Metal KV buffer size = 1152.00 MiB"
+    ("buffer", re.compile(r"KV buffer size\s*=\s*([\d.]+)\s*MiB")),
+    # summary total: "KV self size  = 1152.00 MiB, K (f16): ..., V (f16): ..."
+    ("self", re.compile(r"KV self size\s*=\s*([\d.]+)\s*MiB")),
+    # component fallback: "K (f16):  576.00 MiB" / "V (f16):  576.00 MiB"
+    ("component", re.compile(r"\b[KV] \(\w+\):\s*([\d.]+)\s*MiB")),
 ]
 
 
@@ -254,6 +261,9 @@ def _run_llamacpp_probe(args, ctk: str, ctv: str) -> tuple[float | None, str]:
         "-c", str(args.ctx), "-fa", "on",
         "-ctk", ctk, "-ctv", ctv,
         "--port", str(port), "--no-webui",
+        # Current llama.cpp builds only print the KV allocation lines at a
+        # raised log verbosity; without this the probe has nothing to read.
+        "-lv", "4",
     ]
     if args.extra_server_args:
         cmd += args.extra_server_args.split()
@@ -261,7 +271,8 @@ def _run_llamacpp_probe(args, ctk: str, ctv: str) -> tuple[float | None, str]:
     proc = subprocess.Popen(
         cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True
     )
-    log_lines, kv_mib, deadline = [], [], time.time() + args.startup_timeout
+    log_lines, deadline = [], time.time() + args.startup_timeout
+    kv_mib = {cat: [] for cat, _ in LLAMACPP_KV_PATTERNS}
     try:
         while time.time() < deadline:
             line = proc.stdout.readline()
@@ -270,9 +281,9 @@ def _run_llamacpp_probe(args, ctk: str, ctv: str) -> tuple[float | None, str]:
                     break
                 continue
             log_lines.append(line.rstrip())
-            for pat in LLAMACPP_KV_PATTERNS:
+            for cat, pat in LLAMACPP_KV_PATTERNS:
                 for m in pat.finditer(line):
-                    kv_mib.append(float(m.group(1)))
+                    kv_mib[cat].append(float(m.group(1)))
             # server ready => all init logs have been printed
             if "listening" in line.lower() or "server is listening" in line.lower():
                 break
@@ -282,7 +293,11 @@ def _run_llamacpp_probe(args, ctk: str, ctv: str) -> tuple[float | None, str]:
             proc.wait(timeout=15)
         except subprocess.TimeoutExpired:
             proc.kill()
-    total = sum(kv_mib) if kv_mib else None
+    total = None
+    for cat, _ in LLAMACPP_KV_PATTERNS:  # first matching category wins
+        if kv_mib[cat]:
+            total = sum(kv_mib[cat])
+            break
     return total, "\n".join(log_lines)
 
 
