@@ -1,0 +1,19 @@
+# CUDA path (vLLM). The upstream TurboQuant KV backend landed in vLLM via
+# PR #38479 (merged 2026-04-15). NOTE: vllm 0.19.1 (2026-04-18) was cut from
+# the pre-merge 0.19 release branch and does NOT contain the backend; the
+# first release that ships it is 0.20.0 (2026-04-27).
+#
+# 0.25.0 is the pinned known-good version, validated 2026-07-12 on an
+# RTX 5080 (Blackwell sm_120, WSL2 Ubuntu 22.04, Python 3.10) — it pulls
+# torch 2.11.0+cu130, which supports sm_120 out of the box (no nightly
+# needed). See docs/maintainer-notes.md before bumping.
+#
+# Known packaging gotcha: vllm's `torchcodec` dependency hard-fails at
+# `import vllm` on systems without FFmpeg shared libraries (it raises
+# RuntimeError, which escapes vLLM's ImportError guard). This repo is
+# text-only and does not need it: if `python -c "import vllm"` dies with
+# "Could not load libtorchcodec", run `pip uninstall -y torchcodec`.
+# quickstart.sh does this automatically; see docs/cuda.md.
+vllm==0.25.0
+numpy>=1.26
+requests>=2.31

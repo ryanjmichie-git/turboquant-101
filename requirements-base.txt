@@ -1,0 +1,3 @@
+# Needed on every platform (CPU demo + talking to a llama.cpp server)
+numpy>=1.26
+requests>=2.31
