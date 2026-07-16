@@ -18,6 +18,14 @@ if ! python3 -c 'import sys; sys.exit(0 if sys.version_info >= (3, 10) else 1)';
 fi
 
 # ---- 1. venv + base deps (numpy for the CPU demo) -------------------------
+# A pre-existing .venv may date from before the version check above (e.g.
+# created by macOS's system Python 3.9). Recreate it rather than silently
+# reusing a stale interpreter.
+if [ -d .venv ] && ! .venv/bin/python -c 'import sys; sys.exit(0 if sys.version_info >= (3, 10) else 1)' 2>/dev/null; then
+  echo "Existing .venv uses Python < 3.10 (or is broken); recreating it."
+  rm -rf .venv
+fi
+
 if [ ! -d .venv ]; then
   say "Creating virtualenv (.venv)"
   # Stock Ubuntu (incl. fresh WSL2) ships python3 without the venv module's
@@ -95,6 +103,13 @@ elif [ "$(uname -s)" = "Darwin" ] && [ "$(uname -m)" = "arm64" ]; then
     curl -sf http://127.0.0.1:8080/health >/dev/null 2>&1 && break
     sleep 2
   done
+  # The loop above falls through after 120 tries -- don't run the demo
+  # against a server that never came up.
+  if ! curl -sf http://127.0.0.1:8080/health >/dev/null 2>&1; then
+    echo "llama-server never became healthy; last lines of its log:"
+    tail -n 20 /tmp/tq101-server.log || true
+    exit 1
+  fi
   python scripts/demo.py --backend llamacpp --url http://127.0.0.1:8080 \
     --label q8_0-kv
   echo

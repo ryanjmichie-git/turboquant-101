@@ -28,11 +28,13 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import queue
 import re
 import shutil
 import socket
 import subprocess
 import sys
+import threading
 import time
 
 DEFAULT_MODEL = "Qwen/Qwen3-4B"
@@ -198,7 +200,8 @@ def verify_vllm(args) -> int:
     # Sanity check: did the engine actually accept the dtype?
     if re.search(r"(?i)(invalid|unsupported).{0,40}kv[_ ]cache", comp_log):
         banner(False, f"Engine rejected kv_cache_dtype={dtype}. Check vLLM version "
-                      f"(needs the PR #38479 backend, vllm>=0.19.1).")
+                      f"(needs the PR #38479 backend, first shipped in vllm 0.20.0; "
+                      f"note 0.19.x does NOT contain it).")
         return 1
 
     if base_tokens is None or comp_tokens is None:
@@ -254,6 +257,24 @@ def _free_port() -> int:
         return s.getsockname()[1]
 
 
+def _extract_kv_mib(lines) -> float | None:
+    """Total KV cache MiB from server log lines.
+
+    Categories in LLAMACPP_KV_PATTERNS are priority-ordered and the first
+    category with any matches is summed ALONE -- summing across categories
+    double-counts (the "KV self size" summary repeats the K/V component
+    figures on the same line)."""
+    by_cat = {cat: [] for cat, _ in LLAMACPP_KV_PATTERNS}
+    for line in lines:
+        for cat, pat in LLAMACPP_KV_PATTERNS:
+            for m in pat.finditer(line):
+                by_cat[cat].append(float(m.group(1)))
+    for cat, _ in LLAMACPP_KV_PATTERNS:
+        if by_cat[cat]:
+            return sum(by_cat[cat])
+    return None
+
+
 def _run_llamacpp_probe(args, ctk: str, ctv: str) -> tuple[float | None, str]:
     port = _free_port()
     cmd = [
@@ -271,21 +292,38 @@ def _run_llamacpp_probe(args, ctk: str, ctv: str) -> tuple[float | None, str]:
     proc = subprocess.Popen(
         cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True
     )
+
+    # Read stdout on a background thread. A plain readline() loop blocks
+    # until a NEWLINE arrives, so a server that stalls silently -- or one
+    # emitting only carriage-return progress updates during a model
+    # download -- made --startup-timeout ineffective exactly when it was
+    # most needed. The queue lets the deadline fire regardless.
+    lines_q = queue.Queue()
+
+    def _pump():
+        for raw in proc.stdout:
+            lines_q.put(raw)
+        lines_q.put(None)  # EOF marker
+
+    threading.Thread(target=_pump, daemon=True).start()
+
     log_lines, deadline = [], time.time() + args.startup_timeout
-    kv_mib = {cat: [] for cat, _ in LLAMACPP_KV_PATTERNS}
     try:
-        while time.time() < deadline:
-            line = proc.stdout.readline()
-            if not line:
+        while True:
+            remaining = deadline - time.time()
+            if remaining <= 0:
+                break
+            try:
+                line = lines_q.get(timeout=min(remaining, 0.5))
+            except queue.Empty:
                 if proc.poll() is not None:
                     break
                 continue
+            if line is None:  # EOF: server exited or closed stdout
+                break
             log_lines.append(line.rstrip())
-            for cat, pat in LLAMACPP_KV_PATTERNS:
-                for m in pat.finditer(line):
-                    kv_mib[cat].append(float(m.group(1)))
             # server ready => all init logs have been printed
-            if "listening" in line.lower() or "server is listening" in line.lower():
+            if "listening" in line.lower():
                 break
     finally:
         proc.terminate()
@@ -293,12 +331,7 @@ def _run_llamacpp_probe(args, ctk: str, ctv: str) -> tuple[float | None, str]:
             proc.wait(timeout=15)
         except subprocess.TimeoutExpired:
             proc.kill()
-    total = None
-    for cat, _ in LLAMACPP_KV_PATTERNS:  # first matching category wins
-        if kv_mib[cat]:
-            total = sum(kv_mib[cat])
-            break
-    return total, "\n".join(log_lines)
+    return _extract_kv_mib(log_lines), "\n".join(log_lines)
 
 
 def verify_llamacpp(args) -> int:

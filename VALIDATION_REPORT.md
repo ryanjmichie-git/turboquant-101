@@ -326,28 +326,32 @@ independent Mac agent run):
 19. **docs/maintainer-notes.md** — items 6–8 annotated RESOLVED with M4
     measurements; status preamble updated.
 
-## 8. Second-pass validation (Mac mini M4, 2026-07-13)
+Added 2026-07-16 after a third-pass static review (independent LLM audit
+of commit `c78b3f2`; see §9):
 
-An independent agent run (OpenAI Codex on the owner's Mac mini M4,
-16 GB, macOS 15.7.4) cloned the published repo at commit `ab9bed8`,
-executed the Apple Silicon path, and cross-validated the CPU demo. Key
-outcomes:
-
-- **CPU demo replicated**: 98.6% → 82.8% naive → 98.2% rotated, matching
-  the CUDA-machine run digit-for-digit.
-- **KV math independently confirmed**: f16 KV at 8K context measured
-  1,152 MiB — exactly the corrected 144 KiB/token, on different
-  hardware and a different inference engine.
-- **Docs ratios confirmed**: q8_0 1.88× and q4_0 3.56× vs the claimed
-  ~1.9× and ~3.6×.
-- **Five genuine defects found** (all fixed above, items 13–17): the
-  quickstart-breaking log-verbosity change, the 2× KV MiB
-  double-count, the non-reproducible `hash()` jitter (also affects the
-  CUDA benchmark's trial pairing), the mislabeled demo "decode" rate,
-  and the Python 3.9/NumPy 2 warning storm.
-- **Still open**: the full Mac A/B benchmark (`mac-f16-kv` vs
-  `mac-q4_0-kv` labels) and an explicit `<think>` grep of raw outputs;
-  the optional TheTom-fork path (item 9).
+20. **scripts/verify.py** — llama.cpp probe stdout is now read on a
+    background thread through a queue, so `--startup-timeout` actually
+    fires. *Why:* the old `readline()` loop only checked the deadline
+    between newline-terminated lines; a server stalling silently (or
+    emitting `\r`-only download progress) blocked indefinitely.
+21. **scripts/verify.py** — KV-size parsing extracted into
+    `_extract_kv_mib()` (pure function over log lines) so the
+    category-priority logic is unit-testable; wrong `vllm>=0.19.1` in the
+    rejected-dtype error message corrected to "first shipped in 0.20.0".
+22. **quickstart.sh** — recreates a pre-existing `.venv` whose
+    interpreter is older than 3.10 (the version gate previously checked
+    only the system `python3`, so venvs created before the gate existed
+    were silently reused); hard-fails with the server log tail if
+    llama-server never passes its health check (the wait loop previously
+    fell through to the demo after 120 failed tries).
+23. **niah/__init__.py** — explicit `__all__` (lint-clean re-exports).
+24. **tests/ + .github/workflows/ci.yml** — regression suite (prompt
+    determinism across PYTHONHASHSEED values, llama.cpp log-fixture
+    parsing incl. the double-count case, silent-server timeout,
+    quickstart version-gate rejection) and CI running the tests, ruff,
+    `bash -n`, and the full CPU quickstart path on Python 3.10 and 3.12.
+    *Why:* three separate validation passes had hand-built the same
+    throwaway checks; they are now permanent.
 
 ## 6. Docs claims contradicted by measured reality
 
@@ -402,3 +406,37 @@ FP8-first/avoid-k3v4_nc guidance.
    README) remains unknown — its context row implies an unrecorded YaRN
    override. The README now says this explicitly; if the original run's
    notes surface, reconcile.
+
+## 8. Second-pass validation (Mac mini M4, 2026-07-13)
+
+An independent agent run (OpenAI Codex on the owner's Mac mini M4,
+16 GB, macOS 15.7.4) cloned the published repo at commit `ab9bed8`,
+executed the Apple Silicon path, and cross-validated the CPU demo. Key
+outcomes:
+
+- **CPU demo replicated**: 98.6% → 82.8% naive → 98.2% rotated, matching
+  the CUDA-machine run digit-for-digit.
+- **KV math independently confirmed**: f16 KV at 8K context measured
+  1,152 MiB — exactly the corrected 144 KiB/token, on different
+  hardware and a different inference engine.
+- **Docs ratios confirmed**: q8_0 1.88× and q4_0 3.56× vs the claimed
+  ~1.9× and ~3.6×.
+- **Five genuine defects found** (all fixed, §5 items 13–17): the
+  quickstart-breaking log-verbosity change, the 2× KV MiB
+  double-count, the non-reproducible `hash()` jitter (also affects the
+  CUDA benchmark's trial pairing), the mislabeled demo "decode" rate,
+  and the Python 3.9/NumPy 2 warning storm.
+- **Still open**: the full Mac A/B benchmark (`mac-f16-kv` vs
+  `mac-q4_0-kv` labels) and an explicit `<think>` grep of raw outputs;
+  the optional TheTom-fork path (item 9).
+
+## 9. Third-pass review (static audit, 2026-07-16)
+
+An independent LLM audit of commit `c78b3f2` (no GPU; static review +
+CPU-level tests) confirmed the second-pass fixes and found six further
+issues, all verified against the code and addressed (§5 items 20–24):
+an ineffective `--startup-timeout` (blocking `readline()`), the Python
+floor not applying to pre-existing venvs, the mac health-check loop
+falling through on failure, a stale `vllm>=0.19.1` error message, this
+report's sections being out of order (fixed by this edit), and the
+absence of any regression tests — now a `tests/` suite plus CI.
