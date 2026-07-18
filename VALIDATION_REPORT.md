@@ -380,11 +380,11 @@ FP8-first/avoid-k3v4_nc guidance.
 
 ## 7. Remaining risks for publishing
 
-1. **Apple Silicon path now has a first pass** (see §8) but the fixed
-   quickstart/verify flow has not itself been re-run end-to-end on the
-   M4, the full Mac A/B benchmark is still outstanding, and the
-   TheTom-fork story (maintainer note 9) remains untested. One more
-   clean `./quickstart.sh` run on the Mac would close this.
+1. **Apple Silicon path: closed** (see §§8, 10) — the fixed flow ran
+   end-to-end on the M4 and the full three-condition Mac benchmark is
+   done at 180 paired trials per condition. Only the optional
+   TheTom-fork exploration (maintainer note 9) remains untested, by
+   choice.
 2. **The vLLM environment is fragile across versions.** Three of the
    four startup blockers found here are vLLM/dependency packaging issues
    (torchcodec, UVA-on-WSL2, FlashInfer JIT) that may appear, disappear,
@@ -440,3 +440,79 @@ floor not applying to pre-existing venvs, the mac health-check loop
 falling through on failure, a stale `vllm>=0.19.1` error message, this
 report's sections being out of order (fixed by this edit), and the
 absence of any regression tests — now a `tests/` suite plus CI.
+
+## 10. Publication evidence run (2026-07-18, both machines, code frozen at fb9f13c)
+
+Purpose: the single statistically thin claim (the Mac q4_0 quality drop,
+56/60 vs 60/60, Fisher p ≈ 0.06) needed more paired trials, and all
+timing claims needed spread estimates. Design: expand each condition to
+**180 paired trials** via `--reps 6` (new deterministic documents,
+identical across conditions; reps 0–1 re-execute the earlier 60-trial
+documents as an embedded determinism check), plus 3 independent
+decode-probe pairs per context per condition, plus a post-hoc replay of
+the four originally failing prompts capturing raw server responses.
+
+### RTX 5080 / vLLM 0.25.0 (Qwen3-4B BF16)
+
+| condition | retrieval | decode 8K (median of 3 [range]) | decode 16K | KV capacity ratio |
+|---|---|---|---|---|
+| baseline | 180/180 | 86.1 [82.2–112.0] | 76.7 [66.7–77.1] | — |
+| turboquant_k3v4_nc | **180/180 ×2 runs** | 61.2 [59.3–72.4] | 45.1 [45.0–45.5] | 3.16x |
+| turboquant_4bit_nc | 180/180 | 73.6 [69.5–89.7] | 61.0 [61.0–62.1] | **2.91x** (verify PASS; matches slot arithmetic 3.82x/layer blended over 32/36 layers) |
+
+- **Determinism**: the k3v4_nc condition was run twice end-to-end;
+  all 180 paired trials produced **byte-identical response text**.
+- **Preset guidance now measured**: `4bit_nc` delivers 92% of k3v4's
+  capacity at roughly half its decode cost (−20% vs −41% at 16K), on
+  top of its far smaller documented perplexity risk.
+- **Transient disclosed**: one end-of-session probe after the first
+  k3v4 180-trial run read 20/19 tok/s (2–3x slow). It did not reproduce
+  in a 60-generation same-session diagnostic (58.7/41.1 tok/s, no clock
+  throttling, 68 °C) nor in the full 180-trial replication (59/46).
+  Treated as a one-off host-side transient; excluded from medians.
+- CUDA determinism vs the *original* 60-trial runs is not checkable —
+  those predate the crc32 jitter fix and used different documents.
+
+### Mac mini M4 16 GB / llama.cpp b9960 (Qwen3-4B Q4_K_M, run by an independent agent)
+
+| condition | strict retrieval | think-artifact trials | decode 8K/16K (median of 3) | prefill vs f16 | KV @8K |
+|---|---|---|---|---|---|
+| f16 KV | **180/180** | 0 | 26.3 / 19.8 | — | 1,152 MiB |
+| q8_0 KV | **180/180** | 0 | 25.7 / 20.1 | −20% / −29% | 612 MiB (1.88x) |
+| q4_0 KV | **165/180** (91.7%, Wilson CI 86.7–94.9%) | **22** (15 empty responses + 7 anomalous hits) | 25.2 / 19.5 | −17% / −25% | 324 MiB (3.56x) |
+
+- **Paired significance**: q4_0 vs f16 on identical documents = 15
+  discordant pairs, all in one direction → exact McNemar p ≈ 6×10⁻⁵.
+  The run-1 ambiguity is resolved: the effect is real. Failure rate on
+  the 120 brand-new documents (9.2%) matches the original 60 (6.7%).
+- **Failure classification (the key finding): not retrieval loss.**
+  Replaying the four originally failing prompts 13× each per condition:
+  under q4_0, **52/52 replays produced the exact needle — inside the
+  server's `reasoning_content` field with empty `content`**
+  (finish_reason "stop"; identical with and without prompt caching).
+  Under f16: 52/52 clean answers in `content`, no reasoning field. The
+  model's memory of the document is intact; what q4_0 degrades is
+  **`/no_think` instruction discipline** — the model re-enters
+  thinking-mode formatting and llama-server's parser routes the answer
+  to the reasoning channel. The benchmark's strict scoring (answer must
+  appear in the answer channel) correctly reports this as task failure,
+  but it must not be quoted as memory corruption.
+- Two token-level artifacts under q4_0 among scored hits:
+  `"ainment\n\nLANTERN-2612"` (stray fragment) and `"DYNAMo-1572"`
+  (case-flipped character; scored as a hit by case-insensitive match).
+- **Determinism on Metal**: reps 0–1 outcomes are identical to the
+  earlier 60-trial runs — same hits, same failures, same `</think>`
+  fragment strings — across separate server processes and days.
+- **q8_0 is indistinguishable from f16** on every measured axis while
+  halving KV memory; its only cost is prefill (slightly *worse* than
+  q4_0's — more quantized bytes written/read at store time).
+- Cost-profile contrast across stacks, now with spreads: on CUDA,
+  TurboQuant costs decode (−20…−41%) and leaves prefill alone; on
+  Metal, quantized KV costs prefill (−17…−29%) and leaves decode alone.
+
+Run manifests: 5080 — vllm 0.25.0/torch 2.11.0+cu130, ambient desktop
+VRAM ~1.2 GB, nothing closed. M4 — macOS 15.7.4, llama-server b9960
+(a935fbffe), 2026-07-18 09:35–19:41 UTC, no crashes/sleep/throttling;
+one pre-benchmark detached server launch was cleaned up before any
+trial ran. Raw result JSONs live in each machine's `results/`
+(gitignored by design).

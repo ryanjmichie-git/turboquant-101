@@ -102,10 +102,15 @@ through this list on the RTX 5080 and the M4.
 8. **Thinking mode.** Spot-check demo outputs for `<think>` leakage with
    the `/no_think` suffix on the current server build.
 
-   > MOSTLY RESOLVED: the q8_0 demo scored 5/5 exact-match on the M4
-   > (build 9960), which implies `/no_think` worked -- but the raw
-   > outputs were not explicitly grepped for `<think>`; do that check
-   > when running the full Mac A/B benchmark.
+   > RESOLVED (with a genuinely interesting answer): `/no_think` works
+   > reliably at f16 and q8_0 KV (0 artifacts in 180 trials each) but
+   > becomes flaky under q4_0 KV: 22/180 trials showed thinking-mode
+   > artifacts (15 answers routed entirely into the server's
+   > `reasoning_content` with empty `content`, 7 hits with stray
+   > `</think>` fragments). Replay of the failing prompts proved the
+   > needle was retrieved in 52/52 cases -- the quantization degrades
+   > instruction discipline, not document memory. See
+   > VALIDATION_REPORT.md §10.
 9. **(Optional) Fork path.** If you want real TurboQuant numbers on
    Metal, test the TheTom fork prebuilds (>= the PR #200 Metal fix) and
    add measured results to docs/apple-silicon.md, clearly labeled as

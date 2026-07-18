@@ -49,6 +49,32 @@ quantizers, not the rotate-then-quantize TurboQuant recipe. The
 identical; the *algorithm* is not. Do not present Path A numbers as
 TurboQuant numbers.
 
+## Measured results (reference M4 16 GB, llama.cpp b9960, Qwen3-4B Q4_K_M)
+
+180 paired trials per condition (identical documents), 2026-07-18:
+
+| condition | KV @ 8K ctx | retrieval | think artifacts | decode 8K/16K | prefill vs f16 |
+|---|---|---|---|---|---|
+| f16 | 1,152 MiB | 180/180 | 0 | 26.3 / 19.8 tok/s | — |
+| q8_0 | 612 MiB (1.88x) | 180/180 | 0 | 25.7 / 20.1 | −20% / −29% |
+| q4_0 | 324 MiB (3.56x) | 165/180 | 22 trials | 25.2 / 19.5 | −17% / −25% |
+
+Three lessons the table compresses:
+
+* **On Metal, quantized KV costs prefill, not decode** — the opposite
+  of TurboQuant on CUDA, where decode pays and prefill doesn't. Where
+  the bill lands depends on the implementation, not the concept.
+* **q8_0 is the sweet spot on Apple Silicon**: indistinguishable from
+  f16 in 180 paired trials (and in decode speed) at half the cache.
+* **q4_0's failures were NOT lost memory.** Replaying every failing
+  prompt showed the model retrieved the exact needle 52/52 times — but
+  emitted it inside a thinking block, which llama-server routes to
+  `reasoning_content`, leaving the answer channel empty. What breaks
+  under q4_0 is the `/no_think` soft switch's reliability (plus rare
+  token-level noise: a stray fragment, one case-flipped character).
+  Strict scoring counts those as task failures — quote them as
+  "instruction discipline degrades", never as "forgets the document".
+
 ## Path B (advanced): a fork with real TurboQuant-family types
 
 The most maintained option is the `TheTom/llama-cpp-turboquant` fork,
@@ -89,6 +115,8 @@ rather than extrapolate.
   and pass `-m /path/to/model.gguf` (and `--gguf` to verify.py).
 * **Qwen3 thinking mode.** The scripts append `/no_think`; if you drive
   the server yourself and answers start with `<think>`, that's why.
+  Measured caveat: under q4_0 KV the soft switch itself gets flaky
+  (~12% of trials on the reference M4) — see the results table above.
 * **Cache type names drift.** `llama-server --help | grep cache-type`
   is the source of truth for your build, not any document -- including
   this one.

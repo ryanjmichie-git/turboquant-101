@@ -41,15 +41,17 @@ Never quote one as the other. The CPU demo walks through why they differ.
 
 ## Reference results
 
-Validated run, 2026-07-12: RTX 5080 16 GB (WSL2 Ubuntu 22.04, vLLM
+Validated runs, 2026-07-12/18: RTX 5080 16 GB (WSL2 Ubuntu 22.04, vLLM
 0.25.0, torch 2.11.0+cu130, Qwen3-4B in BF16), baseline BF16 cache vs
 `turboquant_k3v4_nc` (3-bit keys, 4-bit values, norm correction; the
-backend keeps the first/last 2 layers uncompressed -- docs/cuda.md):
+backend keeps the first/last 2 layers uncompressed -- docs/cuda.md).
+The full evidence trail — including a 180-trial-per-condition run on
+both this card and an M4 Mac, with confidence intervals and a failure
+autopsy — is in VALIDATION_REPORT.md:
 
 | metric | baseline | compressed |
 |---|---|---|
-| Needle retrieval, 8K ctx | 30/30 | 30/30 |
-| Needle retrieval, 16K ctx | 30/30 | 30/30 |
+| Needle retrieval (paired trials) | 180/180 | 180/180 |
 | KV capacity @ 0.9 util | 44,336 tok | 140,320 tok (**3.16x**) |
 | Max context, as shipped | 40,960 tok* | 40,960 tok* |
 | Max context, YaRN x4 override | 43,008 tok | 131,072 tok (**3.05x**) |
