@@ -49,6 +49,24 @@ quantizers, not the rotate-then-quantize TurboQuant recipe. The
 identical; the *algorithm* is not. Do not present Path A numbers as
 TurboQuant numbers.
 
+### Chat with the server you already have
+
+The `llama-server` command above stays up until you stop it (the one
+quickstart.sh starts is temporary -- it's killed when the script exits).
+It speaks the OpenAI API, so once it's healthy you can just talk to it:
+
+```bash
+curl http://127.0.0.1:8080/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{"messages": [{"role": "user", "content": "Say hello. /no_think"}],
+       "max_tokens": 64}'
+```
+
+For a chat window instead of curl, point any OpenAI-compatible UI --
+[Open WebUI](https://docs.openwebui.com/), for example -- at
+`http://127.0.0.1:8080/v1`. That's everyday local serving, with the
+quantized cache you just verified underneath it.
+
 ## Measured results (reference M4 16 GB, llama.cpp b9960, Qwen3-4B Q4_K_M)
 
 180 paired trials per condition (identical documents), 2026-07-18:

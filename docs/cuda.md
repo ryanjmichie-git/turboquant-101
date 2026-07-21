@@ -14,20 +14,48 @@ python scripts/demo.py   --backend vllm --cache-dtype turboquant_k3v4_nc
 
 The knob doing all the work is vLLM's `kv_cache_dtype`. The upstream
 TurboQuant backend (merged April 2026 via PR #38479, first shipped in the
-v0.20.0 release -- v0.19.x predates it) ships four presets:
+v0.20.0 release -- v0.19.x predates it) ships four presets, and the same
+knob also accepts vLLM's older built-in `fp8` cache:
 
 | preset | keys / values | cache ratio* | PPL delta* |
 |---|---|---|---|
+| `fp8` (not TurboQuant) | FP8 K / FP8 V | 2.00x (measured) | negligible (per vLLM) |
 | `turboquant_k8v4` | FP8 K / 4-bit V | ~2.6x | +1.2% |
 | `turboquant_4bit_nc` | 4-bit K / 4-bit V + NC | ~3.8x | +2.7% |
 | `turboquant_k3v4_nc` | 3-bit K / 4-bit V + NC | ~3.5x | +10.6% |
 | `turboquant_3bit_nc` | 3-bit K / 3-bit V + NC | ~4.9x | +20.6% |
 
-*From vLLM's own documentation. Yes, `k3v4_nc` — this repo's reference
-config — costs perplexity even though simple NIAH retrieval stays perfect.
-That is not a contradiction; it is the gap between an easy retrieval task
-and general language modeling. If quality matters more than the last bit
-of memory, `turboquant_4bit_nc` is the better trade. See LEARN.md.
+*TurboQuant rows are from vLLM's own documentation. Yes, `k3v4_nc` — this
+repo's reference config — costs perplexity even though simple NIAH
+retrieval stays perfect. That is not a contradiction; it is the gap
+between an easy retrieval task and general language modeling. See
+LEARN.md §4.
+
+The `fp8` row is vLLM's plain FP8 KV cache, which predates TurboQuant:
+no rotation, no norm correction, and no boundary-protected layers -- so
+its ratio is the clean 16->8-bit arithmetic. The 2.00x is not a docs
+number; it is what `verify.py --backend vllm --cache-dtype fp8` measures
+on the reference RTX 5080. We haven't found a vLLM-published perplexity
+figure for it; vLLM's own guidance simply treats it as the safe first
+step, which matches the ladder below.
+
+### Which one should you actually run?
+
+The table is a menu, not a recommendation. Day to day, climb the ladder
+and stop at the first rung that fits in your memory budget:
+
+1. **BF16 baseline (`auto`)** -- measure first. If memory isn't your
+   bottleneck, compression buys you nothing and costs decode speed
+   (LEARN.md §6).
+2. **`fp8`** -- the safe default: 2x cache for effectively free, per
+   vLLM's own guidance.
+3. **`turboquant_4bit_nc`** -- the practical TurboQuant config: ~3.8x
+   for +2.7% PPL.
+4. **`turboquant_k3v4_nc`** -- this repo's reference config,
+   *deliberately*: it is the maximum-capacity experiment, picked because
+   it makes the memory win big enough to measure convincingly. Reproduce
+   it; think twice before serving real work at +10.6% PPL.
+5. **`turboquant_3bit_nc`** -- demo/warning territory: +20.6% PPL.
 
 ## Which layers actually get compressed (read before quoting ratios)
 
@@ -127,3 +155,33 @@ buys concurrency instead of length. With Qwen's documented YaRN override
 43,008 baseline vs 131,072 compressed -- a **3.05x context expansion**.
 Compression buys memory with compute; the benchmark makes you look at
 both numbers side by side.
+
+## Keep it running (optional)
+
+Everything above spins the model up, measures, and exits. To leave a
+server running and actually chat with it, use vLLM's OpenAI-compatible
+server -- with the daily-driver preset from the ladder, not the
+`k3v4_nc` experiment:
+
+```bash
+vllm serve Qwen/Qwen3-4B --kv-cache-dtype turboquant_4bit_nc \
+    --max-model-len 16384
+```
+
+Driving vLLM yourself means the scripts' automatic env vars don't
+apply: under WSL2, `export VLLM_WSL2_ENABLE_PIN_MEMORY=1` first, and
+add `VLLM_USE_FLASHINFER_SAMPLER=0` if warm-up hits the FlashInfer
+gotcha above. The server listens on port 8000:
+
+```bash
+curl http://localhost:8000/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{"model": "Qwen/Qwen3-4B",
+       "messages": [{"role": "user", "content": "Say hello. /no_think"}],
+       "max_tokens": 64}'
+```
+
+For a chat window instead of curl, point any OpenAI-compatible UI --
+[Open WebUI](https://docs.openwebui.com/), for example -- at
+`http://localhost:8000/v1`. That's the whole bridge: serving is vLLM's
+job; this repo's job was proving the compression underneath it.

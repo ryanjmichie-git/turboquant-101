@@ -1,7 +1,7 @@
 # turboquant-101
 
-**Run 2-3x more context on the GPU you already own, and understand exactly
-what you paid for it.**
+**Fit ~3x more tokens on the GPU you already own — and learn what that
+does and doesn't buy you.**
 
 Every token a language model reads leaves behind a memory footprint (the
 KV cache). Think of the model as a hiker whose backpack fills up as the
@@ -15,6 +15,11 @@ your CPU in one minute, verify on your own GPU that compression is
 genuinely active (not silently disabled -- this happens more than you'd
 think), and reproduce a real retrieval benchmark.
 
+It is a learning and benchmarking laboratory, not a serving stack. It
+doesn't replace vLLM, llama.cpp, or the TurboQuant implementations
+inside them -- it teaches you to run them, prove the compression
+actually engaged, and measure what the tradeoff costs on your hardware.
+
 ## Quickstart
 
 ```bash
@@ -25,7 +30,22 @@ git clone <this-repo> && cd turboquant-101
 That's it. The script runs the CPU demo everywhere, then detects your
 platform: NVIDIA GPUs get the vLLM path with the real
 `turboquant_k3v4_nc` cache (docs/cuda.md), Apple Silicon gets the
-llama.cpp quantized-KV path (docs/apple-silicon.md).
+llama.cpp quantized-KV path (same concept, but not the TurboQuant
+algorithm -- docs/apple-silicon.md has the honest story).
+
+## Choose your path
+
+| You want to... | Go here |
+|---|---|
+| Understand the idea, no GPU needed | `scripts/cpu_demo.py` (~1 min, any machine) |
+| A total-beginner walkthrough | [GETTING_STARTED.md](GETTING_STARTED.md) |
+| Reproduce the validated NVIDIA experiment | `./quickstart.sh`, then [docs/cuda.md](docs/cuda.md) |
+| The safest cache reduction on NVIDIA | `fp8` — see the ladder in [docs/cuda.md](docs/cuda.md) |
+| The practical TurboQuant preset | `turboquant_4bit_nc` (~3.8x, +2.7% PPL) |
+| The maximum-capacity experiment | `turboquant_k3v4_nc` (3.16x measured, +10.6% PPL — eyes open) |
+| To learn the concept on a Mac | [docs/apple-silicon.md](docs/apple-silicon.md), Path A (mainline llama.cpp) |
+| Actual TurboQuant on a Mac | [docs/apple-silicon.md](docs/apple-silicon.md), Path B (community fork) |
+| Everyday local serving | llama.cpp or vLLM directly — this repo is the classroom, not the server |
 
 ## The one distinction that prevents most confusion
 
@@ -82,7 +102,8 @@ Honesty section, because this field has a hype problem:
   8-16K is an easy task. vLLM's own benchmarks show `k3v4_nc` costs
   ~+10% perplexity and measurably hurts reasoning and very-long-context
   tasks. If quality is the priority, `turboquant_4bit_nc` (~3.8x,
-  +2.7% PPL) is the smarter preset. Details in LEARN.md.
+  +2.7% PPL) is the smarter preset. Details in LEARN.md; the day-to-day
+  ladder (FP8 first) is in docs/cuda.md.
 * **No open-source implementation is the full paper.** Community
   consensus dropped the paper's QJL residual stage (it amplified error
   through softmax); what everyone ships is rotation + optimized
@@ -97,6 +118,7 @@ Honesty section, because this field has a hype problem:
 
 ```
 quickstart.sh          platform-detecting entry point
+GETTING_STARTED.md     the walkthrough for total beginners
 scripts/cpu_demo.py    the quantizer math, no GPU (start here)
 scripts/verify.py      proves compression is actually engaged  <- run this
 scripts/demo.py        5-needle retrieval quick win
