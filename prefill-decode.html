@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prefill vs Decode — turboquant-101</title>
+<style>
+  :root { --ink:#1d1d1f; --sub:#86868b; --blue:#0071e3; --amber:#e08b2e; --bg:#f5f5f7; }
+  * { box-sizing:border-box; -webkit-font-smoothing:antialiased; }
+  body { font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",sans-serif;
+         margin:0; background:var(--bg); color:var(--ink); }
+  .wrap { max-width:720px; margin:0 auto; padding:32px 20px 56px; }
+  h1 { font-size:1.7rem; letter-spacing:-.02em; margin:0 0 4px; }
+  .sub { color:var(--sub); margin:0 0 22px; font-size:.95rem; }
+  .card { background:#fff; border-radius:18px; padding:22px; box-shadow:0 1px 3px rgba(0,0,0,.06); margin-bottom:18px; }
+  .label { font-size:.8rem; font-weight:600; text-transform:uppercase; letter-spacing:.05em; color:var(--sub); margin:16px 0 8px; }
+  .label:first-child { margin-top:0; }
+  .seg { display:flex; background:#e9e9ec; border-radius:12px; padding:3px; }
+  .seg button { flex:1; border:0; background:transparent; padding:9px 6px; border-radius:9px;
+                font-size:.92rem; font-weight:500; cursor:pointer; transition:.15s; color:var(--ink); }
+  .seg button.on { background:#fff; box-shadow:0 1px 4px rgba(0,0,0,.12); font-weight:600; }
+  .switchrow { display:flex; align-items:center; justify-content:space-between; margin-top:16px; }
+  .sw { position:relative; width:51px; height:31px; background:#e2e2e6; border-radius:16px; cursor:pointer; transition:.2s; flex:none; }
+  .sw.on { background:#34c759; }
+  .sw::after { content:''; position:absolute; top:2px; left:2px; width:27px; height:27px; border-radius:50%;
+               background:#fff; box-shadow:0 1px 4px rgba(0,0,0,.25); transition:.2s; }
+  .sw.on::after { left:22px; }
+  .drops { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .drop { border:1.5px solid #e2e2e6; border-radius:14px; padding:16px 14px; background:#fff;
+          cursor:pointer; text-align:center; font-size:.95rem; transition:.15s; }
+  .drop:hover { border-color:var(--blue); transform:translateY(-1px); }
+  .drop .emoji { font-size:1.9rem; display:block; margin-bottom:6px; }
+  .drop span { color:var(--sub); font-size:.8rem; display:block; margin-top:3px; }
+  .stage { min-height:200px; }
+  .phase { font-size:.85rem; font-weight:600; margin:12px 0 6px; }
+  .ph1 { color:var(--blue); } .ph2 { color:var(--amber); }
+  .track { height:14px; border-radius:7px; background:#e9e9ec; overflow:hidden; }
+  .fill1 { height:100%; width:0; background:var(--blue); border-radius:7px; }
+  .fill2 { height:100%; width:0; background:var(--amber); border-radius:7px; }
+  .grid { display:grid; grid-template-columns:repeat(30,1fr); gap:2px; margin:8px 0; }
+  .cell { aspect-ratio:1; border-radius:2px; background:#e9e9ec; }
+  .cell.on { background:var(--blue); }
+  .answer { font-family:ui-monospace,Menlo,Consolas,monospace; font-size:.9rem; background:#f5f5f7;
+            border-radius:10px; padding:10px 12px; min-height:60px; margin-top:8px; white-space:pre-wrap; }
+  .times { display:flex; gap:12px; margin-top:14px; }
+  .tbox { flex:1; border-radius:12px; padding:10px 12px; background:#f5f5f7; }
+  .tbox b { display:block; font-size:1.25rem; font-variant-numeric:tabular-nums; }
+  .tbox span { font-size:.78rem; color:var(--sub); }
+  .verdict { margin-top:14px; padding:12px 14px; border-radius:12px; background:#f0f7ff;
+             font-size:.92rem; line-height:1.45; display:none; }
+  .fine { font-size:.78rem; color:var(--sub); margin-top:14px; line-height:1.45; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Feel the two phases</h1>
+  <p class="sub">Chapter 5 companion. Every request has a <b style="color:var(--blue)">reading</b> phase (prefill — the whole document at once) and a <b style="color:var(--amber)">writing</b> phase (decode — one word at a time). Compression's bill lands on a different phase depending on your platform.</p>
+
+  <div class="card">
+    <div class="label">Your platform</div>
+    <div class="seg" id="plat">
+      <button data-p="cuda" class="on">NVIDIA + vLLM</button>
+      <button data-p="mac">Mac + llama.cpp</button>
+    </div>
+    <div class="switchrow">
+      <div><b>Cache compression</b><br><span style="color:var(--sub);font-size:.82rem" id="swLabel">off — full-precision cache</span></div>
+      <div class="sw" id="sw"></div>
+    </div>
+
+    <div class="label" style="margin-top:20px">Send something to the model</div>
+    <div class="drops">
+      <button class="drop" data-in="chat"><span class="emoji">💬</span>A quick question<span>~30 tokens in, ~200 out</span></button>
+      <button class="drop" data-in="pdf"><span class="emoji">📄</span>A 100-page PDF<span>~60,000 tokens in, ~300 out</span></button>
+    </div>
+  </div>
+
+  <div class="card stage">
+    <div class="phase ph1">Phase 1 — Reading (prefill)</div>
+    <div class="grid" id="grid"></div>
+    <div class="track"><div class="fill1" id="f1"></div></div>
+
+    <div class="phase ph2">Phase 2 — Writing (decode)</div>
+    <div class="track"><div class="fill2" id="f2"></div></div>
+    <div class="answer" id="ans">The answer will type out here…</div>
+
+    <div class="times">
+      <div class="tbox"><b id="t1">—</b><span>reading time</span></div>
+      <div class="tbox"><b id="t2">—</b><span>writing time</span></div>
+    </div>
+    <div class="verdict" id="verdict"></div>
+    <div class="fine">Animation speeds are illustrative and sped up for watchability; the <em>slowdown percentages</em> are the repo's measured medians (NVIDIA: writing −20% with the balanced TurboQuant preset, reading unchanged · Mac: reading −25% with q8_0, writing unchanged).</div>
+  </div>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+let plat='cuda', comp=false, running=false;
+
+// measured-slowdown model (relative); base speeds illustrative
+const CFG={
+  cuda:{ pre:4000, dec:77, compPre:1.00, compDec:0.80, name:'NVIDIA + vLLM (TurboQuant 4bit_nc)' },
+  mac:{  pre:300,  dec:20, compPre:0.75, compDec:1.00, name:'Mac + llama.cpp (q8_0 cache)' },
+};
+const INPUTS={ chat:{inTok:30, outTok:200, ansText:'Sure — the bug is in your loop bounds: you are iterating one past the end of the list. Change range(len(x)+1) to range(len(x)) and the crash goes away.'},
+               pdf:{inTok:60000, outTok:300, ansText:'Summary: the agreement runs 36 months with automatic renewal, liability is capped at fees paid in the prior 12 months, and termination requires 90 days written notice. Three clauses deserve legal review: 4.2 (indemnity), 7.1 (data ownership), 11.3 (non-solicit).'} };
+
+const grid=$('grid');
+for(let i=0;i<150;i++){const d=document.createElement('div');d.className='cell';grid.appendChild(d);}
+const cells=[...grid.children];
+
+document.querySelectorAll('#plat button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('#plat button').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on'); plat=b.dataset.p;
+});
+$('sw').onclick=()=>{ comp=!comp; $('sw').classList.toggle('on',comp);
+  $('swLabel').textContent=comp?'on — compressed cache (the repo’s practical rung)':'off — full-precision cache'; };
+document.querySelectorAll('.drop').forEach(b=>b.onclick=()=>run(b.dataset.in));
+
+function run(kind){
+  if(running) return; running=true;
+  const c=CFG[plat], inp=INPUTS[kind];
+  const preRate=c.pre*(comp?c.compPre:1), decRate=c.dec*(comp?c.compDec:1);
+  const tPre=inp.inTok/preRate, tDec=inp.outTok/decRate;              // "real" seconds
+  const scale=Math.min(1, 7/(tPre+tDec));                             // fit demo in ~7s
+  cells.forEach(x=>x.classList.remove('on'));
+  $('f1').style.width='0'; $('f2').style.width='0'; $('ans').textContent='';
+  $('t1').textContent='…'; $('t2').textContent='…'; $('verdict').style.display='none';
+
+  const preMs=Math.max(400,tPre*scale*1000), decMs=Math.max(1200,tDec*scale*1000);
+  const start=performance.now();
+  (function stepPre(){
+    const p=Math.min(1,(performance.now()-start)/preMs);
+    $('f1').style.width=(p*100)+'%';
+    const n=Math.floor(p*cells.length);
+    for(let i=0;i<n;i++) cells[i].classList.add('on');
+    if(p<1) requestAnimationFrame(stepPre);
+    else { $('t1').textContent=tPre<1?(tPre*1000).toFixed(0)+' ms':tPre.toFixed(1)+' s'; stepDec(); }
+  })();
+  function stepDec(){
+    const s2=performance.now(), words=inp.ansText.split(' ');
+    (function tick(){
+      const p=Math.min(1,(performance.now()-s2)/decMs);
+      $('f2').style.width=(p*100)+'%';
+      $('ans').textContent=words.slice(0,Math.max(1,Math.floor(p*words.length))).join(' ');
+      if(p<1) requestAnimationFrame(tick);
+      else {
+        $('t2').textContent=tDec.toFixed(1)+' s';
+        const v=$('verdict'); v.style.display='block';
+        const dom=(kind==='pdf')?'reading':'writing';
+        const hit=(plat==='cuda')?'writing':'reading';
+        v.innerHTML='<b>'+c.name+':</b> this request was dominated by <b>'+dom+'</b>. '+
+          (comp
+            ? 'Compression’s bill on this platform lands on <b>'+hit+'</b> — '+
+              (dom===hit?'so you felt it. ':'so you barely felt it. ')+
+              'That match-up, not the headline ratio, is what decides whether compression is cheap <i>for you</i>.'
+            : 'Toggle compression on and rerun to see which phase pays.');
+        running=false;
+      }
+    })();
+  }
+}
+</script>
+</body>
+</html>

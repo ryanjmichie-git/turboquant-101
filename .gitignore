@@ -5,3 +5,4 @@ results/*.json
 models/
 *.gguf
 .DS_Store
+*.docx

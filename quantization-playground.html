@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Quantization Playground — turboquant-101</title>
+<style>
+  :root { --ink:#1d1d1f; --sub:#86868b; --blue:#0071e3; --red:#d93a2b; --green:#1d7a3e; --bg:#f5f5f7; }
+  * { box-sizing:border-box; -webkit-font-smoothing:antialiased; }
+  body { font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",sans-serif;
+         margin:0; background:var(--bg); color:var(--ink); }
+  .wrap { max-width:720px; margin:0 auto; padding:32px 20px 56px; }
+  h1 { font-size:1.7rem; letter-spacing:-.02em; margin:0 0 4px; }
+  .sub { color:var(--sub); margin:0 0 22px; font-size:.95rem; }
+  .card { background:#fff; border-radius:18px; padding:22px; box-shadow:0 1px 3px rgba(0,0,0,.06); margin-bottom:18px; }
+  .label { font-size:.8rem; font-weight:600; text-transform:uppercase; letter-spacing:.05em; color:var(--sub); margin:16px 0 8px; }
+  .label:first-child { margin-top:0; }
+  .seg { display:flex; background:#e9e9ec; border-radius:12px; padding:3px; }
+  .seg button { flex:1; border:0; background:transparent; padding:9px 6px; border-radius:9px;
+                font-size:.92rem; font-weight:500; cursor:pointer; transition:.15s; color:var(--ink); }
+  .seg button.on { background:#fff; box-shadow:0 1px 4px rgba(0,0,0,.12); font-weight:600; }
+  .slrow { display:flex; justify-content:space-between; align-items:baseline; }
+  .slval { font-weight:600; font-variant-numeric:tabular-nums; }
+  input[type=range] { width:100%; appearance:none; height:4px; border-radius:2px;
+    background:linear-gradient(to right,var(--blue) var(--fill,50%),#e2e2e6 var(--fill,50%)); }
+  input[type=range]::-webkit-slider-thumb { appearance:none; width:24px; height:24px; border-radius:50%;
+    background:#fff; box-shadow:0 1px 5px rgba(0,0,0,.3); cursor:grab; }
+  .switchrow { display:flex; align-items:center; justify-content:space-between; margin-top:16px; }
+  .sw { position:relative; width:51px; height:31px; background:#e2e2e6; border-radius:16px; cursor:pointer; transition:.2s; flex:none; }
+  .sw.on { background:#34c759; }
+  .sw::after { content:''; position:absolute; top:2px; left:2px; width:27px; height:27px; border-radius:50%;
+               background:#fff; box-shadow:0 1px 4px rgba(0,0,0,.25); transition:.2s; }
+  .sw.on::after { left:22px; }
+  .scores { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .score { border-radius:14px; padding:14px; background:#f5f5f7; }
+  .score .big { font-size:2rem; font-weight:700; font-variant-numeric:tabular-nums; line-height:1; }
+  .score .cap { font-size:.8rem; color:var(--sub); margin-top:4px; }
+  canvas { width:100%; height:110px; border-radius:10px; background:#fafafa; }
+  .caption { font-size:.8rem; color:var(--sub); margin:6px 0 14px; }
+  .verdict { margin-top:14px; padding:12px 14px; border-radius:12px; background:#f0f7ff; font-size:.92rem; line-height:1.5; }
+  .fine { font-size:.78rem; color:var(--sub); margin-top:14px; line-height:1.45; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Quantization Playground</h1>
+  <p class="sub">Chapter 2 companion. This page runs the <em>actual math</em> — real vectors, a real rotation, real rounding — live in your browser. Break it, then fix it.</p>
+
+  <div class="card">
+    <div class="label">Bits per number (menu size)</div>
+    <div class="seg" id="bits">
+      <button data-b="2">2 bits · 4 values</button>
+      <button data-b="3" class="on">3 bits · 8 values</button>
+      <button data-b="4">4 bits · 16 values</button>
+    </div>
+
+    <div class="label" style="margin-top:18px">Outlier strength</div>
+    <div class="slrow"><span>4 of 64 channels scaled by</span><span class="slval" id="outV">4×</span></div>
+    <input type="range" id="out" min="1" max="8" step="0.5" value="4">
+
+    <div class="switchrow">
+      <div><b>Rotate before rounding</b><br><span style="color:var(--sub);font-size:.82rem">the TurboQuant trick (Walsh–Hadamard)</span></div>
+      <div class="sw" id="rot"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="label">Value distribution (one vector's 64 channels)</div>
+    <canvas id="hist" width="640" height="110"></canvas>
+    <div class="caption" id="histCap"></div>
+
+    <div class="label">Retrieval — does attention still find the right token?</div>
+    <div class="scores">
+      <div class="score"><div class="big" id="sFP">—</div><div class="cap">full precision (reference)</div></div>
+      <div class="score"><div class="big" id="sQ">—</div><div class="cap" id="sQcap">quantized, your settings</div></div>
+    </div>
+    <div class="verdict" id="verdict"></div>
+    <div class="fine">Live math on synthetic attention data (64 dims; 256 keys in 32 look-alike clusters, so fine detail matters; 384 lookups scored by cosine similarity; fixed seed). Same experiment family as <code>scripts/cpu_demo.py</code> — the repo's version is where the paper's quoted numbers (82.8% → 98.2%) come from; this page's exact percentages differ because the toy data differs, but the shape of the story is the same math.</div>
+  </div>
+</div>
+
+<script>
+// ---------- fixed-seed RNG ----------
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);
+  t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function gauss(rng){let u=0,v=0;while(!u)u=rng();while(!v)v=rng();
+  return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v)}
+
+// ---------- data (built once, outliers applied per-render) ----------
+// Clustered keys: 32 "topics" x 8 similar keys each. Telling near-neighbors
+// apart needs fine detail -- exactly what bad quantization destroys.
+const D=64,NC=32,PER=8,NK=NC*PER,NQ=384,OUTCH=[3,17,31,45];
+const rng=mulberry32(1234);
+const centers=Array.from({length:NC},()=>Float64Array.from({length:D},()=>gauss(rng)));
+const baseKeys=[];
+for(const c of centers)for(let p=0;p<PER;p++)
+  baseKeys.push(Float64Array.from({length:D},(_,i)=>c[i]+gauss(rng)*0.3));
+const signs=Float64Array.from({length:D},()=>rng()<0.5?-1:1);
+const qNoise=Array.from({length:NQ},()=>Float64Array.from({length:D},()=>gauss(rng)*0.2));
+const qTarget=Array.from({length:NQ},(_,i)=>i%NK);
+
+// ---------- math ----------
+function wht(v){const y=Float64Array.from(v);for(let len=1;len<D;len<<=1)
+  for(let i=0;i<D;i+=len<<1)for(let j=i;j<i+len;j++){
+    const a=y[j],b=y[j+len];y[j]=a+b;y[j+len]=a-b;}
+  const s=1/Math.sqrt(D);for(let i=0;i<D;i++)y[i]*=s;return y}
+function rotFwd(v){const t=new Float64Array(D);for(let i=0;i<D;i++)t[i]=v[i]*signs[i];return wht(t)}
+function rotInv(v){const t=wht(v);for(let i=0;i<D;i++)t[i]*=signs[i];return t}
+function quant(v,bits){const qmax=(1<<(bits-1))-1;let m=0;
+  for(let i=0;i<D;i++)m=Math.max(m,Math.abs(v[i]));if(!m)return Float64Array.from(v);
+  const out=new Float64Array(D);for(let i=0;i<D;i++){
+    let q=Math.round(v[i]/m*qmax);q=Math.max(-qmax-1,Math.min(qmax,q));out[i]=q/qmax*m}return out}
+function dot(a,b){let s=0;for(let i=0;i<D;i++)s+=a[i]*b[i];return s}
+function retrieval(keysDeq){
+  const dn=keysDeq.map(v=>Math.sqrt(dot(v,v))||1);   // cosine: no norm bias
+  let hits=0;
+  for(let qi=0;qi<NQ;qi++){const t=qTarget[qi],q=new Float64Array(D);
+    for(let i=0;i<D;i++)q[i]=curKeys[t][i]+qNoise[qi][i];
+    let best=-1,bv=-Infinity;
+    for(let k=0;k<NK;k++){const d=dot(q,keysDeq[k])/dn[k];if(d>bv){bv=d;best=k}}
+    if(best===t)hits++}
+  return hits/NQ*100}
+
+// ---------- state + render ----------
+let bits=3,outlier=4,rotate=false,curKeys=[];
+const $=id=>document.getElementById(id);
+document.querySelectorAll('#bits button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('#bits button').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on');bits=+b.dataset.b;render()});
+$('out').addEventListener('input',e=>{outlier=+e.target.value;render()});
+$('rot').onclick=()=>{rotate=!rotate;$('rot').classList.toggle('on',rotate);render()};
+
+function render(){
+  const e=$('out');e.style.setProperty('--fill',((e.value-e.min)/(e.max-e.min)*100)+'%');
+  $('outV').textContent=outlier+'×';
+  curKeys=baseKeys.map(k=>{const v=Float64Array.from(k);
+    for(const c of OUTCH)v[c]*=outlier;return v});
+
+  const deq=curKeys.map(k=>{
+    if(!rotate)return quant(k,bits);
+    return rotInv(quant(rotFwd(k),bits));});
+
+  const fp=retrieval(curKeys),q=retrieval(deq);
+  $('sFP').textContent=fp.toFixed(1)+'%';
+  $('sQ').textContent=q.toFixed(1)+'%';
+  $('sQ').style.color=q>fp-3?'var(--green)':q>fp-10?'#b8860b':'var(--red)';
+  $('sQcap').textContent=bits+'-bit'+(rotate?' + rotation':' naive');
+
+  const drop=fp-q,v=$('verdict');
+  v.innerHTML = drop<3
+    ? '<b>Memory survived.</b> '+(rotate?'The rotation spread the outliers thin — the tiny menu covers everything that matters.':'At this menu size even naive rounding copes. Now try fewer bits or stronger outliers.')
+    : drop<12
+    ? '<b>Damage showing.</b> '+(rotate?'Even rotation has limits at this pressure — this is why 2-bit caches are research, not defaults.':'The outliers are stretching the menu. Flip the rotation on and watch.')
+    : '<b>Memory wrecked.</b> The '+(1<<(bits-1))*2+'-value menu is spent covering '+outlier+'× outliers, so normal values collapse onto one or two options. '+(rotate?'Even the rotation can\'t save '+bits+'-bit at this pressure — which is honest: below 3 bits, this trick stops being enough.':'Flip the rotation on.');
+
+  // histogram of channel values (key 0), pre-quant, in the space that gets rounded
+  const sample=rotate?rotFwd(curKeys[0]):curKeys[0];
+  const c=$('hist'),ctx=c.getContext('2d');ctx.clearRect(0,0,c.width,c.height);
+  const m=Math.max(...Array.from(sample,Math.abs))*1.05,bins=48,counts=new Array(bins).fill(0);
+  for(const x of sample)counts[Math.min(bins-1,Math.floor((x+m)/(2*m)*bins))]++;
+  const cmax=Math.max(...counts),bw=c.width/bins;
+  // grid lines = allowed menu values
+  const qmax=(1<<(bits-1))-1;ctx.strokeStyle='#d9d9de';
+  for(let g=-qmax-1;g<=qmax;g++){const gx=((g/qmax*m)+m)/(2*m)*c.width;
+    ctx.beginPath();ctx.moveTo(gx,0);ctx.lineTo(gx,c.height);ctx.stroke()}
+  for(let b=0;b<bins;b++){const h=counts[b]/cmax*(c.height-12);
+    const mid=(b+0.5)/bins*2*m-m;
+    ctx.fillStyle=Math.abs(mid)>m*0.55?'#d93a2b':'#0071e3';
+    ctx.fillRect(b*bw+1,c.height-h,bw-2,h)}
+  $('histCap').textContent=rotate
+    ? 'After rotation: the energy is spread bell-curve-wide — most vertical menu lines get used.'
+    : 'Before rotation: values crowd the middle while '+OUTCH.length+' outlier channels (red) force the menu lines far apart.';
+}
+render();
+</script>
+</body>
+</html>

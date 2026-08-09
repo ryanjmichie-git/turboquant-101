@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Is It Actually On? — turboquant-101</title>
+<style>
+  :root { --ink:#1d1d1f; --sub:#86868b; --blue:#0071e3; --green:#1d7a3e; --red:#c0392b; --bg:#f5f5f7; }
+  * { box-sizing:border-box; -webkit-font-smoothing:antialiased; }
+  body { font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",sans-serif;
+         margin:0; background:var(--bg); color:var(--ink); }
+  .wrap { max-width:720px; margin:0 auto; padding:32px 20px 56px; }
+  h1 { font-size:1.7rem; letter-spacing:-.02em; margin:0 0 4px; }
+  .sub { color:var(--sub); margin:0 0 22px; font-size:.95rem; }
+  .card { background:#fff; border-radius:18px; padding:22px; box-shadow:0 1px 3px rgba(0,0,0,.06); margin-bottom:18px; }
+  .prog { font-size:.8rem; font-weight:600; color:var(--sub); text-transform:uppercase; letter-spacing:.05em; margin-bottom:10px; }
+  .story { font-size:.95rem; line-height:1.5; margin-bottom:12px; }
+  .term { font-family:ui-monospace,Menlo,Consolas,monospace; font-size:.82rem; line-height:1.55;
+          background:#1c1c22; color:#d6d6de; border-radius:12px; padding:14px 16px; white-space:pre-wrap; margin-bottom:16px; }
+  .term .hl { color:#ffd479; }
+  .choices { display:grid; gap:8px; }
+  .choice { border:1.5px solid #e2e2e6; background:#fff; border-radius:12px; padding:12px 14px;
+            font-size:.95rem; cursor:pointer; text-align:left; transition:.15s; }
+  .choice:hover { border-color:var(--blue); }
+  .choice.right { border-color:var(--green); background:#e8f7ee; }
+  .choice.wrong { border-color:var(--red); background:#fdecec; }
+  .choice:disabled { cursor:default; }
+  .reveal { display:none; margin-top:14px; padding:14px; border-radius:12px; background:#f0f7ff;
+            font-size:.92rem; line-height:1.55; }
+  .reveal b.v { display:block; margin-bottom:4px; }
+  .next { display:none; margin-top:14px; border:0; background:var(--blue); color:#fff; font-weight:600;
+          font-size:.95rem; padding:11px 22px; border-radius:12px; cursor:pointer; }
+  .final { display:none; text-align:center; }
+  .final .big { font-size:2.6rem; font-weight:700; margin:8px 0; }
+  .final p { line-height:1.55; }
+  .tag { font-size:.75rem; font-weight:600; color:var(--sub); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Is it actually on?</h1>
+  <p class="sub">Chapter 3 companion. Five situations, all drawn from real events in this repo's validation. Read the evidence, make the call. The engine will not help you.</p>
+
+  <div class="card" id="game">
+    <div class="prog" id="prog"></div>
+    <div class="story" id="story"></div>
+    <div class="term" id="term"></div>
+    <div class="choices" id="choices"></div>
+    <div class="reveal" id="reveal"></div>
+    <button class="next" id="next">Next situation</button>
+  </div>
+
+  <div class="card final" id="final">
+    <div class="tag">FINAL SCORE</div>
+    <div class="big" id="score"></div>
+    <p id="finalMsg"></p>
+    <p style="color:var(--sub);font-size:.9rem">The one-line course: <b>a setting being accepted is not a feature being used.</b> The only evidence that survives all five situations is a controlled comparison — which is exactly what <code>scripts/verify.py</code> runs.</p>
+    <button class="next" style="display:inline-block" onclick="location.reload()">Play again</button>
+  </div>
+</div>
+
+<script>
+const S=[
+{ story:"You start the engine with <b>--kv-cache-dtype turboquant_k3v4_nc</b>. It boots cleanly. Earlier, a plain run reported a cache capacity of 38,544 tokens. Now the startup log says:",
+  term:'INFO  Using TURBOQUANT attention backend.\nINFO  <span class="hl">GPU KV cache size: 121,984 tokens</span>\nINFO  Engine ready.',
+  choices:["Compression is ON","Compression is OFF","This log can't tell me"], right:0,
+  why:"121,984 vs 38,544 on the same GPU, same model, same settings — a 3.16x jump nothing else explains. This is the good outcome, and note WHY it's convincing: you have a controlled comparison, not just a label. (Measured: the repo's verify.py PASS.)" },
+{ story:"You fat-finger the preset name — <b>turboquant_k9v9_nc</b>. The engine responds:",
+  term:'ValueError: <span class="hl">kv_cache_dtype=\'turboquant_k9v9_nc\' is not a valid CacheDType</span>\nEngine failed to start.',
+  choices:["Compression is ON","Compression is OFF — and this is the GOOD failure","This log can't tell me"], right:1,
+  why:"A loud, immediate rejection is the failure mode you WANT. Remember what it looks like — because the dangerous failures in the next three rounds look nothing like this. (Real behavior of the pinned vLLM.)" },
+{ story:"You query the engine's internal API for cache size instead of reading the log. Compression is set. The API returns one number; the startup log printed another:",
+  term:'>>> engine.cache_config.num_gpu_blocks * block_size\n<span class="hl">70,160</span>\n# meanwhile, the startup log said:\nINFO  GPU KV cache size: <span class="hl">140,320 tokens</span>',
+  choices:["Trust the API — code beats logs","Trust the log — and investigate the mismatch","Split the difference"], right:1,
+  why:"The API under-reported by exactly 2x: compressed blocks pack more tokens than the API's block-size arithmetic assumes. Trusting it would have 'proven' working compression broken — a false FAIL. This really happened here; verify.py now prefers the engine log and prints which source it used." },
+{ story:"On a Mac, you start llama-server with <b>-ctk q8_0 -ctv q8_0</b> and grep the log for cache sizes, to check the shrink. You find:",
+  term:'$ grep -i "KV" server.log\n<span class="hl">(no output)</span>',
+  choices:["No cache lines = compression is OFF","Compression is ON — no news is good news","This log can't tell me — something is hiding the evidence"], right:2,
+  why:"Current llama.cpp builds only print KV-size lines at raised verbosity (-lv 4). The evidence wasn't absent — it was hidden below the default log level. An automated check here 'ran successfully' and found nothing; the repo's Mac quickstart originally broke on exactly this." },
+{ story:"Final round. You benchmark with compression off, then on, and compare the speed column your tool prints per request:",
+  term:'baseline    16,384 tok ctx:  <span class="hl">4 tok/s</span>\ncompressed  16,384 tok ctx:  <span class="hl">4 tok/s</span>\n# identical! compression is free?!',
+  choices:["Yes — measured proof compression costs nothing","This metric can't tell me — it's timing the wrong thing","Compression is broken; it should be slower"], right:1,
+  why:"Whole-request timing of a 10-token answer over a 16K document mostly measures READING the document, drowning any writing-speed difference. The repo's dedicated decode probe on the same runs: 77 vs 45 tok/s — a 41% cost this column completely hid. Numbers need a story for where they came from." },
+];
+let i=0,score=0;
+const $=id=>document.getElementById(id);
+function show(){
+  const s=S[i];
+  $('prog').textContent='Situation '+(i+1)+' of '+S.length+(score||i?'  ·  '+score+' correct':'');
+  $('story').innerHTML=s.story;
+  $('term').innerHTML=s.term;
+  $('reveal').style.display='none';$('next').style.display='none';
+  $('choices').innerHTML='';
+  s.choices.forEach((c,ci)=>{
+    const b=document.createElement('button');b.className='choice';b.textContent=c;
+    b.onclick=()=>pick(ci,b);$('choices').appendChild(b);});
+}
+function pick(ci,btn){
+  const s=S[i];
+  document.querySelectorAll('.choice').forEach((b,bi)=>{
+    b.disabled=true;
+    if(bi===s.right)b.classList.add('right');
+    else if(b===btn)b.classList.add('wrong');});
+  if(ci===s.right)score++;
+  $('reveal').innerHTML='<b class="v">'+(ci===s.right?'Correct.':'Not quite.')+'</b>'+s.why;
+  $('reveal').style.display='block';
+  $('next').style.display='inline-block';
+  $('next').textContent=i<S.length-1?'Next situation':'See your score';
+}
+$('next').onclick=()=>{ i++;
+  if(i<S.length)show();
+  else{ $('game').style.display='none';$('final').style.display='block';
+    $('score').textContent=score+' / '+S.length;
+    $('finalMsg').textContent=score===5?'Perfect. You out-skepticized three real bugs and two real traps.':
+      score>=3?'Solid. The ones you missed are the ones that fool most published benchmarks too.':
+      'The traps won this round — which is the honest starting point. Read Chapter 3\'s sidebar and rematch.';}};
+show();
+</script>
+</body>
+</html>

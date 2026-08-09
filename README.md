@@ -127,6 +127,11 @@ niah/                  the benchmark protocol + backend adapters
 docs/cuda.md           NVIDIA/WSL2 setup and gotchas
 docs/apple-silicon.md  Mac setup (and the honest llama.cpp story)
 LEARN.md               the deep explainer -- what, why, when NOT to
+playgrounds (*.html)   zero-install browser companions -- the cache
+                       explorer, quantization playground, prefill vs
+                       decode, the context ceiling, and a verify-first
+                       game; open any of them in a browser
+BACKLOG.md             deferred work, honestly labeled
 ```
 
 ## Credits

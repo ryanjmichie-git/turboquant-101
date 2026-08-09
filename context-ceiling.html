@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Three Walls — turboquant-101</title>
+<style>
+  :root { --ink:#1d1d1f; --sub:#86868b; --blue:#0071e3; --dark:#3a3a40; --bg:#f5f5f7; }
+  * { box-sizing:border-box; -webkit-font-smoothing:antialiased; }
+  body { font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",sans-serif;
+         margin:0; background:var(--bg); color:var(--ink); }
+  .wrap { max-width:720px; margin:0 auto; padding:32px 20px 56px; }
+  h1 { font-size:1.7rem; letter-spacing:-.02em; margin:0 0 4px; }
+  .sub { color:var(--sub); margin:0 0 22px; font-size:.95rem; }
+  .card { background:#fff; border-radius:18px; padding:22px; box-shadow:0 1px 3px rgba(0,0,0,.06); margin-bottom:18px; }
+  .label { font-size:.8rem; font-weight:600; text-transform:uppercase; letter-spacing:.05em; color:var(--sub); margin:16px 0 8px; }
+  .label:first-child { margin-top:0; }
+  .chips { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .chip { border:1.5px solid #e2e2e6; background:#fff; border-radius:14px; padding:11px 12px;
+          cursor:pointer; text-align:left; transition:.15s; }
+  .chip.on { border-color:var(--blue); background:#f0f7ff; }
+  .chip b { display:block; font-size:.95rem; }
+  .chip span { font-size:.78rem; color:var(--sub); }
+  .switchrow { display:flex; align-items:center; justify-content:space-between; margin-top:16px; }
+  .sw { position:relative; width:51px; height:31px; background:#e2e2e6; border-radius:16px; cursor:pointer; transition:.2s; flex:none; }
+  .sw.on { background:#34c759; }
+  .sw::after { content:''; position:absolute; top:2px; left:2px; width:27px; height:27px; border-radius:50%;
+               background:#fff; box-shadow:0 1px 4px rgba(0,0,0,.25); transition:.2s; }
+  .sw.on::after { left:22px; }
+  .slrow { display:flex; justify-content:space-between; align-items:baseline; }
+  .slval { font-weight:600; font-variant-numeric:tabular-nums; }
+  input[type=range] { width:100%; appearance:none; height:4px; border-radius:2px;
+    background:linear-gradient(to right,var(--blue) var(--fill,50%),#e2e2e6 var(--fill,50%)); }
+  input[type=range]::-webkit-slider-thumb { appearance:none; width:24px; height:24px; border-radius:50%;
+    background:#fff; box-shadow:0 1px 5px rgba(0,0,0,.3); cursor:grab; }
+  .trackbox { position:relative; height:150px; margin:26px 6px 8px; }
+  .rail { position:absolute; left:0; right:0; top:96px; height:6px; border-radius:3px; background:#e9e9ec; }
+  .reach { position:absolute; top:96px; height:6px; border-radius:3px; background:var(--blue); left:0; transition:width .35s; }
+  .wall { position:absolute; top:22px; width:10px; height:86px; border-radius:4px; transition:left .35s; }
+  .wall.mem { background:var(--blue); opacity:.85; }
+  .wall.pos { background:var(--dark); }
+  .wtag { position:absolute; transform:translateX(-50%); font-size:.72rem; font-weight:600;
+          text-align:center; line-height:1.25; transition:left .35s; white-space:nowrap; }
+  .wtag small { display:block; font-weight:500; color:var(--sub); }
+  .flag { position:absolute; top:70px; transform:translateX(-50%); font-size:1.3rem; transition:left .35s; }
+  .axis { display:flex; justify-content:space-between; font-size:.72rem; color:var(--sub); margin:0 6px; }
+  .stats { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:16px; }
+  .stat { border-radius:14px; padding:14px; background:#f5f5f7; }
+  .stat .big { font-size:1.7rem; font-weight:700; font-variant-numeric:tabular-nums; line-height:1.05; }
+  .stat .cap { font-size:.8rem; color:var(--sub); margin-top:4px; }
+  .verdict { margin-top:14px; padding:12px 14px; border-radius:12px; background:#f0f7ff; font-size:.92rem; line-height:1.55; }
+  .fine { font-size:.78rem; color:var(--sub); margin-top:14px; line-height:1.45; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Three walls, lowest wall wins</h1>
+  <p class="sub">Chapter 6 companion. "How much more text fits?" is a race against two walls — your <b style="color:var(--blue)">memory</b> and the model's <b>position limit</b>. Compression only moves one of them.</p>
+
+  <div class="card">
+    <div class="label">Cache compression</div>
+    <div class="chips">
+      <button class="chip on" data-r="1"><b>Off</b><span>full-precision cache (144 KiB/token)</span></button>
+      <button class="chip" data-r="3.1653"><b>TurboQuant k3v4_nc</b><span>3.16x — measured on the repo's 5080</span></button>
+    </div>
+    <div class="switchrow">
+      <div><b>Long-context mode (YaRN ×4)</b><br><span style="color:var(--sub);font-size:.82rem">Qwen's documented override — lifts the position wall to 131,072</span></div>
+      <div class="sw" id="yarn"></div>
+    </div>
+    <div class="label" style="margin-top:18px">GPU memory</div>
+    <div class="slrow"><span>Qwen3-4B on</span><span class="slval" id="vramV">16 GB</span></div>
+    <input type="range" id="vram" min="10" max="48" step="1" value="16">
+  </div>
+
+  <div class="card">
+    <div class="trackbox">
+      <div class="rail"></div>
+      <div class="reach" id="reach"></div>
+      <div class="wall mem" id="wMem"></div>
+      <div class="wtag" id="tMem" style="top:0"></div>
+      <div class="wall pos" id="wPos"></div>
+      <div class="wtag" id="tPos" style="top:126px"></div>
+      <div class="flag" id="flag">🏁</div>
+    </div>
+    <div class="axis"><span>1K</span><span>8K</span><span>32K</span><span>128K</span><span>256K tokens</span></div>
+
+    <div class="stats">
+      <div class="stat"><div class="big" id="maxCtx"></div><div class="cap">longest document that fits</div></div>
+      <div class="stat"><div class="big" id="conc"></div><div class="cap">full-length requests at once</div></div>
+    </div>
+    <div class="verdict" id="verdict"></div>
+    <div class="fine">Arithmetic model (85% utilization, 7.6 GiB weights, ~0.7 GiB working space) with the repo's measured cache ratios. Measured anchors on the real 16 GB card: without YaRN both conditions stop at the 40,960 wall (concurrency 1.07 → 3.43); with YaRN ×4, max context measured 43,008 → 131,072 (3.05x). Engine accounting is the third, thinner wall — this page folds it into memory; <code>verify.py</code> is the truth.</div>
+  </div>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+let ratio=1, yarn=false;
+const PERTOK_F16=147456, LIMIT=40960, LIMIT_YARN=131072;
+const MIN=1024, MAX=262144;
+const X=t=>Math.max(0,Math.min(1,Math.log2(t/MIN)/Math.log2(MAX/MIN)))*100;
+
+document.querySelectorAll('.chip').forEach(c=>c.onclick=()=>{
+  document.querySelectorAll('.chip').forEach(x=>x.classList.remove('on'));
+  c.classList.add('on'); ratio=+c.dataset.r; upd();});
+$('yarn').onclick=()=>{yarn=!yarn;$('yarn').classList.toggle('on',yarn);upd();};
+$('vram').addEventListener('input',upd);
+
+function upd(){
+  const e=$('vram');e.style.setProperty('--fill',((e.value-e.min)/(e.max-e.min)*100)+'%');
+  const vram=+e.value; $('vramV').textContent=vram+' GB';
+  const pool=Math.max(0,(vram*0.85-7.6-0.7))*2**30;
+  const memTok=Math.floor(pool/(PERTOK_F16/ratio));
+  const limit=yarn?LIMIT_YARN:LIMIT;
+  const maxCtx=Math.max(0,Math.min(memTok,limit));
+  const conc=maxCtx>0?memTok/maxCtx:0;
+
+  $('wMem').style.left=X(memTok)+'%'; $('tMem').style.left=X(memTok)+'%';
+  $('tMem').innerHTML='memory wall<small>'+memTok.toLocaleString()+' tok</small>';
+  $('wPos').style.left=X(limit)+'%'; $('tPos').style.left=X(limit)+'%';
+  $('tPos').innerHTML='position wall<small>'+limit.toLocaleString()+' tok</small>';
+  $('flag').style.left=X(maxCtx)+'%';
+  $('reach').style.width=X(maxCtx)+'%';
+
+  $('maxCtx').textContent=maxCtx>0?maxCtx.toLocaleString():'0';
+  $('conc').textContent=conc>=1?('~'+(conc<3?conc.toFixed(2):conc.toFixed(1))):'—';
+
+  const v=$('verdict');
+  if(memTok<=0)
+    v.innerHTML='<b>No room at all</b> — the model alone eats this memory. No cache trick helps; you need weight compression or a smaller model (a different chapter of your life).';
+  else if(memTok<limit)
+    v.innerHTML='<b>The memory wall wins.</b> Compression '+(ratio>1?'moved it — and every byte it freed became usable length.':'would move this wall directly: flip it on and watch.');
+  else
+    v.innerHTML='<b>The position wall wins.</b> Memory has room for '+memTok.toLocaleString()+' tokens, but the model was never trained past position '+limit.toLocaleString()+'. '+(ratio>1?'So compression bought <b>concurrency</b> ('+conc.toFixed(1)+' full-length jobs at once), not length'+(yarn?'.':' — flip on YaRN to convert it into length.'):'Extra memory is buying concurrency, not length'+(yarn?'.':' — YaRN lifts the wall.'));
+}
+upd();
+</script>
+</body>
+</html>

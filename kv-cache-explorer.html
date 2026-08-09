@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KV Cache Explorer — turboquant-101</title>
+<style>
+  :root { --ink:#1d1d1f; --sub:#86868b; --blue:#0071e3; --bg:#f5f5f7; --card:#ffffff; }
+  * { box-sizing:border-box; -webkit-font-smoothing:antialiased; }
+  body { font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",sans-serif;
+         margin:0; background:var(--bg); color:var(--ink); }
+  .wrap { max-width:720px; margin:0 auto; padding:32px 20px 56px; }
+  h1 { font-size:1.7rem; letter-spacing:-.02em; margin:0 0 4px; }
+  .sub { color:var(--sub); margin:0 0 24px; font-size:.95rem; }
+  .card { background:var(--card); border-radius:18px; padding:22px;
+          box-shadow:0 1px 3px rgba(0,0,0,.06); margin-bottom:18px; }
+  .label { font-size:.8rem; font-weight:600; text-transform:uppercase; letter-spacing:.05em;
+           color:var(--sub); margin:18px 0 8px; }
+  .label:first-child { margin-top:0; }
+  .seg { display:flex; background:#e9e9ec; border-radius:12px; padding:3px; }
+  .seg button { flex:1; border:0; background:transparent; padding:9px 6px; border-radius:9px;
+                font-size:.92rem; font-weight:500; color:var(--ink); cursor:pointer; transition:.15s; }
+  .seg button.on { background:#fff; box-shadow:0 1px 4px rgba(0,0,0,.12); font-weight:600; }
+  .chips { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .chip { border:1.5px solid #e2e2e6; background:#fff; border-radius:14px; padding:11px 12px;
+          cursor:pointer; text-align:left; transition:.15s; }
+  .chip.on { border-color:var(--blue); background:#f0f7ff; }
+  .chip b { display:block; font-size:.95rem; }
+  .chip span { font-size:.78rem; color:var(--sub); }
+  input[type=range] { width:100%; appearance:none; height:4px; border-radius:2px;
+    background:linear-gradient(to right,var(--blue) var(--fill,50%),#e2e2e6 var(--fill,50%)); }
+  input[type=range]::-webkit-slider-thumb { appearance:none; width:24px; height:24px; border-radius:50%;
+    background:#fff; box-shadow:0 1px 5px rgba(0,0,0,.3); cursor:grab; }
+  .slrow { display:flex; justify-content:space-between; align-items:baseline; }
+  .slval { font-weight:600; font-variant-numeric:tabular-nums; }
+  .big { font-size:2.1rem; font-weight:700; letter-spacing:-.02em; line-height:1.05;
+         font-variant-numeric:tabular-nums; }
+  .unit { font-size:1rem; font-weight:500; color:var(--sub); }
+  .stat { margin-bottom:16px; }
+  .verdict { font-size:.95rem; font-weight:600; border-radius:12px; padding:10px 14px; margin-top:4px; }
+  .ok  { background:#e8f7ee; color:#1d7a3e; }
+  .bad { background:#fdecec; color:#c0392b; }
+  .bar { display:flex; height:30px; border-radius:9px; overflow:hidden; margin:12px 0 6px; }
+  .seg2 { transition:width .35s ease; }
+  .legend { font-size:.78rem; color:var(--sub); display:flex; gap:14px; flex-wrap:wrap; }
+  .dot { display:inline-block; width:9px; height:9px; border-radius:3px; margin-right:4px; }
+  .fine { font-size:.78rem; color:var(--sub); margin-top:14px; line-height:1.45; }
+  .custom { display:none; margin-top:10px; }
+  .custom.show { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .custom label { font-size:.78rem; color:var(--sub); display:block; margin-bottom:3px; }
+  .custom input { width:100%; padding:8px 10px; border:1.5px solid #e2e2e6; border-radius:10px;
+                  font-size:.95rem; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>KV Cache Explorer</h1>
+  <p class="sub">Chapter 1 companion. Pick, drag, and watch what fits. This is arithmetic — <code>verify.py</code> is the truth on real hardware.</p>
+
+  <div class="card">
+    <div class="label">Model</div>
+    <div class="seg" id="modelSeg">
+      <button data-m="qwen" class="on">Qwen3-4B</button>
+      <button data-m="llama">Llama-3.1-8B</button>
+      <button data-m="custom">Custom</button>
+    </div>
+    <div class="custom" id="customBox">
+      <div><label>Layers</label><input type="number" id="cLayers" value="36"></div>
+      <div><label>KV heads</label><input type="number" id="cHeads" value="8"></div>
+      <div><label>Head dim</label><input type="number" id="cDim" value="128"></div>
+      <div><label>Weights on GPU (GiB)</label><input type="number" id="cW" value="7.6" step="0.1"></div>
+    </div>
+
+    <div class="label">Cache compression</div>
+    <div class="chips" id="chips">
+      <button class="chip on" data-b="2.0"><b>None</b><span>full precision (f16)</span></button>
+      <button class="chip" data-b="1.0625"><b>Light</b><span>q8_0 · ~1.9x · the Mac free lunch</span></button>
+      <button class="chip" data-b="0.687"><b>Balanced</b><span>TurboQuant 4-bit · 2.91x measured</span></button>
+      <button class="chip" data-b="0.632"><b>Max</b><span>TurboQuant 3-bit · 3.16x measured</span></button>
+    </div>
+
+    <div class="label">Memory</div>
+    <div class="slrow"><span>GPU / unified memory</span><span class="slval" id="vramV">16 GB</span></div>
+    <input type="range" id="vram" min="8" max="48" step="1" value="16">
+
+    <div class="slrow" style="margin-top:14px"><span>Context length</span><span class="slval" id="ctxV">16,384 tokens</span></div>
+    <input type="range" id="ctx" min="1024" max="262144" step="1024" value="16384">
+  </div>
+
+  <div class="card">
+    <div class="stat"><div class="label">Cache cost per token</div>
+      <div class="big" id="perTok"></div></div>
+    <div class="stat"><div class="label">Your context costs</div>
+      <div class="big" id="cost"></div></div>
+    <div class="stat"><div class="label">Tokens that fit</div>
+      <div class="big" id="fits"></div>
+      <div id="verdict" class="verdict"></div></div>
+
+    <div class="label">Where the memory goes</div>
+    <div class="bar" id="bar"></div>
+    <div class="legend">
+      <span><span class="dot" style="background:#48484e"></span>weights</span>
+      <span><span class="dot" style="background:#b9b9c1"></span>working space</span>
+      <span><span class="dot" style="background:var(--blue)"></span>cache pool</span>
+      <span><span class="dot" style="background:#e9e9ec"></span>reserved</span>
+    </div>
+
+    <div class="fine">Assumes the engine uses 85% of memory (verify.py's default) and ~0.7 GiB working space, as profiled on the repo's RTX 5080. TurboQuant chips use the repo's <em>measured system ratios</em> (protected layers included). One ceiling arithmetic can't see: the model's own position limit — Qwen3-4B stops at 40,960 tokens no matter how much memory is free (paper, Chapter 6).</div>
+  </div>
+</div>
+
+<script>
+const MODELS = { qwen:{L:36,H:8,D:128,W:7.6}, llama:{L:32,H:8,D:128,W:15.0} };
+let model='qwen', bytesEl=2.0;
+const $=id=>document.getElementById(id);
+const fmtG=b=>(b/2**30).toFixed(b/2**30>=10?1:2);
+
+document.querySelectorAll('#modelSeg button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('#modelSeg button').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on'); model=b.dataset.m; upd();
+});
+document.querySelectorAll('.chip').forEach(c=>c.onclick=()=>{
+  document.querySelectorAll('.chip').forEach(x=>x.classList.remove('on'));
+  c.classList.add('on'); bytesEl=+c.dataset.b; upd();
+});
+document.querySelectorAll('input').forEach(i=>i.addEventListener('input',upd));
+
+function upd(){
+  $('customBox').classList.toggle('show', model==='custom');
+  const m = model==='custom'
+    ? {L:+$('cLayers').value||36,H:+$('cHeads').value||8,D:+$('cDim').value||128,W:+$('cW').value||7.6}
+    : MODELS[model];
+  const vram=+$('vram').value, ctx=+$('ctx').value, util=0.85, OH=0.7;
+  ['vram','ctx'].forEach(id=>{const e=$(id);e.style.setProperty('--fill',((e.value-e.min)/(e.max-e.min)*100)+'%')});
+  $('vramV').textContent=vram+' GB';
+  $('ctxV').textContent=ctx.toLocaleString()+' tokens';
+
+  const perTok=2*m.L*m.H*m.D*bytesEl;
+  const budget=vram*util*2**30, pool=Math.max(0,budget-(m.W+OH)*2**30);
+  const fits=Math.floor(pool/perTok), cost=ctx*perTok;
+
+  $('perTok').innerHTML=(perTok/1024).toFixed(1)+' <span class="unit">KiB</span>';
+  $('cost').innerHTML=fmtG(cost)+' <span class="unit">GiB</span>';
+  $('fits').innerHTML=fits.toLocaleString()+' <span class="unit">tokens</span>';
+  const v=$('verdict');
+  if(pool<=0){v.className='verdict bad';v.textContent='The model alone overflows this memory — the cache never gets a byte.';}
+  else if(fits<ctx){v.className='verdict bad';v.textContent='Your context does not fit — this is the out-of-memory moment.';}
+  else{v.className='verdict ok';v.textContent='Fits, with room for '+(fits-ctx).toLocaleString()+' more tokens.';}
+
+  const total=vram*2**30;
+  const segs=[['#48484e',m.W*2**30],['#b9b9c1',pool>0?OH*2**30:Math.max(0,budget-m.W*2**30)],
+              ['#0071e3',pool],['#e9e9ec',Math.max(0,total-budget)]];
+  $('bar').innerHTML=segs.map(([c,b])=>'<div class="seg2" style="background:'+c+';width:'+Math.max(0,b/total*100)+'%"></div>').join('');
+}
+upd();
+</script>
+</body>
+</html>
