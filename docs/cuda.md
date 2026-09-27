@@ -113,6 +113,13 @@ allocator backs vLLM's sleep mode. Verify still PASSes and the demo still
 finds 5/5 (measured on the reference RTX 5080, 2026-09-27). Ignore it; if
 a result line is missing, look elsewhere first.
 
+**Where did the engine log go?** `demo.py` and `benchmark.py` hide vLLM's
+INFO/WARNING output by default (`VLLM_LOGGING_LEVEL=ERROR`; errors still
+show) and shut the engine down before printing results, so the answer is
+the last thing on screen. Add `--verbose` to see the full log -- including
+the engine's own evidence lines, "Using TURBOQUANT attention backend" and
+"GPU KV cache size". An exported `VLLM_LOGGING_LEVEL` always wins.
+
 **"Could not find nvcc" / FlashInfer JIT errors during engine warm-up.**
 vLLM's FlashInfer sampler JIT-compiles CUDA on first use, which needs a
 full CUDA toolkit + host compiler; a fresh WSL2 install has neither, and

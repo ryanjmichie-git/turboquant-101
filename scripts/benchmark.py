@@ -108,11 +108,14 @@ def run(args) -> int:
     RESULTS.mkdir(exist_ok=True)
     path = RESULTS / f"{label}.json"
     path.write_text(json.dumps(out, indent=2))
+    # Results are on disk; shut the engine down before the summary so
+    # vLLM's teardown output can't bury it (see VLLMBackend.close).
+    backend.close()
 
     hits = sum(r["hit"] for r in records)
     speeds = [r["gen_tokens"] / r["seconds"] for r in records if r["seconds"] > 0]
     print(f"\n  {label}: {hits}/{len(records)} retrieved | "
-          f"median decode {statistics.median(speeds):.0f} tok/s | "
+          f"median e2e {statistics.median(speeds):.0f} tok/s (not decode; see probe) | "
           f"saved to {path.relative_to(ROOT)}")
     print("  Run the other condition, then: python scripts/benchmark.py --report\n")
     return 0

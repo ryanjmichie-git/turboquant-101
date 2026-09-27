@@ -56,7 +56,18 @@ class VLLMBackend:
         gpu_memory_utilization: float = 0.90,
         enforce_eager: bool = False,
         extra_engine_kwargs: dict | None = None,
+        verbose: bool = False,
     ):
+        # Quiet by default. Run in-process, vLLM prints ~100 lines of INFO
+        # (a full config dump, compile/graph-capture progress) plus a
+        # harmless 15-line libnvrtc WARNING traceback on 0.25.0 -- enough to
+        # bury the five result lines. ERROR keeps real failures visible;
+        # --verbose (or exporting VLLM_LOGGING_LEVEL yourself) restores the
+        # full log, which is where the engine's own evidence lines live
+        # ("Using TURBOQUANT attention backend", "GPU KV cache size").
+        # Must be set before vllm is imported; the engine's worker process
+        # inherits it.
+        os.environ.setdefault("VLLM_LOGGING_LEVEL", "INFO" if verbose else "ERROR")
         # vLLM >= 0.25 requires UVA (pinned host memory) in its GPU worker,
         # but disables pinned memory by default under WSL2; without this the
         # engine dies at startup with "RuntimeError: UVA is not available".
@@ -154,6 +165,31 @@ class VLLMBackend:
     def describe(self) -> str:
         return f"vLLM / {DEFAULT_MODEL} / kv_cache_dtype={self.cache_dtype}"
 
+    def close(self) -> None:
+        """Shut the engine down now instead of at interpreter exit.
+
+        vLLM's engine teardown prints its own noise (on 0.25.0 the worker
+        hits the libnvrtc ImportError while shutting down -- docs/cuda.md).
+        Closing explicitly makes that happen BEFORE the caller prints its
+        summary, so the result is the last thing on screen rather than
+        buried above a traceback. Safe to call twice; never raises."""
+        llm, self.llm = getattr(self, "llm", None), None
+        if llm is None:
+            return
+        try:
+            engine = getattr(llm, "llm_engine", None)
+            for target in (engine, getattr(engine, "engine_core", None)):
+                shutdown = getattr(target, "shutdown", None)
+                if callable(shutdown):
+                    shutdown()
+                    break
+        except Exception:
+            pass  # teardown noise is vLLM's; our results are already in hand
+        finally:
+            del llm
+            import gc
+            gc.collect()
+
 
 class LlamaServerBackend:
     """HTTP client for llama-server (llama.cpp).
@@ -215,6 +251,9 @@ class LlamaServerBackend:
     def describe(self) -> str:
         return f"llama-server @ {self.base_url} ({self.label})"
 
+    def close(self) -> None:
+        """Nothing to release: you own the server process."""
+
 
 def build_backend(args) -> "VLLMBackend | LlamaServerBackend":
     """Construct a backend from argparse args shared by demo/benchmark."""
@@ -226,6 +265,7 @@ def build_backend(args) -> "VLLMBackend | LlamaServerBackend":
             max_model_len=args.max_model_len,
             gpu_memory_utilization=args.gpu_mem_util,
             extra_engine_kwargs=extra,
+            verbose=getattr(args, "verbose", False),
         )
     return LlamaServerBackend(base_url=args.url, label=args.label or "")
 
@@ -251,4 +291,8 @@ def add_backend_args(parser) -> None:
     )
     parser.add_argument(
         "--label", default=None, help="name for this run (used in results files)"
+    )
+    parser.add_argument(
+        "--verbose", action="store_true",
+        help="show vLLM's full engine log (hidden by default; errors always show)",
     )

@@ -30,6 +30,8 @@ def main():
         ap.error("--backend is required")
 
     corpus = CORPUS.read_text()
+    if args.backend == "vllm" and not args.verbose:
+        print("Loading the model (vLLM engine log hidden; add --verbose to see it)...")
     backend = build_backend(args)
     print(f"\nBackend: {backend.describe()}")
     print(f"Hiding 5 needles at 50% depth of ~{args.context:,}-token documents...\n")
@@ -37,19 +39,28 @@ def main():
     trials = make_trials(
         needles=make_needles(5), depths=[50], contexts=[args.context], reps=1
     )
-    hits = 0
-    for t in trials:
-        prompt = build_prompt(corpus, t, backend.count_tokens)
-        res = backend.generate(prompt)
-        ok = score(res.text, t.needle)
-        hits += ok
-        # Whole-request rate (prefill included) -- a sanity number for the
-        # ~10-token answers here, NOT a decode-speed figure. The benchmark's
-        # decode probe measures actual decode rate (niah/backends.py).
-        speed = res.gen_tokens / res.seconds if res.seconds > 0 else 0
-        print(f"  {'FOUND ' if ok else 'MISSED'}  expected {t.needle:<18} "
-              f"got: {res.text.strip()[:40]!r}  ({speed:.1f} tok/s end-to-end)")
+    # Collect results, shut the engine down, THEN print: vLLM's teardown
+    # writes its own output, and the answer should be the last thing on
+    # screen, not buried above it.
+    rows, hits = [], 0
+    try:
+        for i, t in enumerate(trials, 1):
+            print(f"  trial {i}/{len(trials)}...", flush=True)
+            prompt = build_prompt(corpus, t, backend.count_tokens)
+            res = backend.generate(prompt)
+            ok = score(res.text, t.needle)
+            hits += ok
+            # Whole-request rate (prefill included) -- a sanity number for
+            # the ~10-token answers here, NOT a decode-speed figure. The
+            # benchmark's decode probe measures actual decode rate.
+            speed = res.gen_tokens / res.seconds if res.seconds > 0 else 0
+            rows.append(f"  {'FOUND ' if ok else 'MISSED'}  expected {t.needle:<18} "
+                        f"got: {res.text.strip()[:40]!r}  ({speed:.1f} tok/s end-to-end)")
+    finally:
+        backend.close()
 
+    print(f"\nResults ({backend.describe()}):")
+    print("\n".join(rows))
     print(f"\n  Retrieved {hits}/5.")
     if hits == 5:
         print("  The model's memory of the document survived. Now do it "
