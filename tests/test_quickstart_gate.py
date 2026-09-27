@@ -42,3 +42,16 @@ def test_quickstart_recreates_stale_venv_structurally():
     assert "rm -rf .venv" in text
     # the gate and the recreation check must both enforce the same floor
     assert text.count("(3, 10)") >= 2
+
+
+def test_quickstart_skips_reinstalling_pinned_vllm():
+    """Re-running `pip install -r requirements-cuda.txt` re-resolves vLLM's
+    deps and reinstalls the torchcodec the guard removes, so reruns must
+    skip the install when the pinned version is already present."""
+    text = (ROOT / "quickstart.sh").read_text(encoding="utf-8")
+    assert "importlib.metadata" in text and "VLLM_PIN" in text
+    assert "requirements-cuda.txt" in text
+    # the pin the script reads must actually exist in the requirements file
+    req = (ROOT / "requirements-cuda.txt").read_text(encoding="utf-8")
+    assert any(line.startswith("vllm==") for line in req.splitlines())
+    assert "PIP_DISABLE_PIP_VERSION_CHECK=1" in text

@@ -104,6 +104,15 @@ banner whose log ends in the torchcodec traceback. This repo is
 text-only: `pip uninstall -y torchcodec` and re-run. quickstart.sh now
 tests `import torchcodec` directly and removes it automatically.
 
+**"ImportError: libnvrtc.so.13: cannot open shared object file" (harmless).**
+Printed twice on every engine run: once at startup as a WARNING traceback
+(`vllm.third_party.deep_gemm` failed to import) and once at shutdown, after
+results are printed (`vllm.cumem_allocator`). Neither component is used
+here -- DeepGEMM serves FP8 matmuls for other model families, and the cumem
+allocator backs vLLM's sleep mode. Verify still PASSes and the demo still
+finds 5/5 (measured on the reference RTX 5080, 2026-09-27). Ignore it; if
+a result line is missing, look elsewhere first.
+
 **"Could not find nvcc" / FlashInfer JIT errors during engine warm-up.**
 vLLM's FlashInfer sampler JIT-compiles CUDA on first use, which needs a
 full CUDA toolkit + host compiler; a fresh WSL2 install has neither, and

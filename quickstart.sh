@@ -4,6 +4,10 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
+# pip's "new release available" notice tempts beginners into upgrading pip
+# mid-setup; it has nothing to do with this repo.
+export PIP_DISABLE_PIP_VERSION_CHECK=1
+
 say() { printf '\n\033[1m== %s ==\033[0m\n' "$*"; }
 
 say "turboquant-101"
@@ -55,8 +59,18 @@ if command -v nvidia-smi >/dev/null 2>&1; then
     echo "model loading from /mnt/ is painfully slow. Continuing anyway."
   ;; esac
 
-  say "Installing vLLM (this is a large download; grab a coffee)"
-  pip install -q -r requirements-cuda.txt
+  # Skip the install when the pinned vLLM is already present. Re-running
+  # `pip install -r` is not a no-op: pip re-resolves vLLM's dependencies and
+  # reinstalls the torchcodec the guard below just removed, so every rerun
+  # would download it and print the removal message again (seen on the
+  # 2026-09-27 WSL2 rerun).
+  VLLM_PIN="$(sed -n 's/^vllm==\([^[:space:]]*\).*/\1/p' requirements-cuda.txt)"
+  if [ -n "$VLLM_PIN" ] && python -c "import importlib.metadata as m, sys; sys.exit(0 if m.version('vllm') == sys.argv[1] else 1)" "$VLLM_PIN" 2>/dev/null; then
+    say "vLLM $VLLM_PIN already installed -- skipping the big download"
+  else
+    say "Installing vLLM (this is a large download; grab a coffee)"
+    pip install -q -r requirements-cuda.txt
+  fi
 
   # vllm's torchcodec dependency hard-fails on systems without FFmpeg
   # shared libraries (RuntimeError or OSError "Could not load this

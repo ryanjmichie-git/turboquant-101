@@ -266,7 +266,8 @@ def verify_vllm(args) -> int:
 
     if ratio >= PASS_RATIO:
         banner(True, f"Compression is ACTIVE ({ratio:.2f}x more KV capacity). "
-                     f"Your benchmark numbers can be trusted.")
+                     f"This proves it is ON -- not that quality held; the "
+                     f"needle demo and benchmark test that.")
         return 0
     banner(False, f"Ratio {ratio:.2f}x is below {PASS_RATIO}x -- compression did "
                   f"NOT meaningfully engage. Do NOT trust any benchmark run in "
