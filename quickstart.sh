@@ -58,13 +58,29 @@ if command -v nvidia-smi >/dev/null 2>&1; then
   say "Installing vLLM (this is a large download; grab a coffee)"
   pip install -q -r requirements-cuda.txt
 
-  # vllm's torchcodec dependency hard-fails at `import vllm` on systems
-  # without FFmpeg shared libraries (it raises RuntimeError, which escapes
-  # vLLM's ImportError guard). This repo is text-only and never decodes
-  # video, so drop torchcodec if it breaks the import.
-  if ! python -c 'import vllm' >/dev/null 2>&1; then
-    echo "import vllm failed -- removing optional torchcodec and retrying"
+  # vllm's torchcodec dependency hard-fails on systems without FFmpeg
+  # shared libraries (RuntimeError or OSError "Could not load this
+  # library: .../libtorchcodec_image.so"), which escapes vLLM's
+  # ImportError guard. A bare `import vllm` does NOT catch it: vLLM loads
+  # torchcodec lazily, and on 0.25.0 the crash only fires once the engine
+  # imports vllm.sampling_params -- i.e. inside verify.py, after this
+  # check has already passed (hit on a fresh WSL2 run, 2026-09-27). So
+  # test torchcodec itself. This repo is text-only and never decodes
+  # video, so a torchcodec that can't load is safe to remove.
+  if python -m pip show -q torchcodec >/dev/null 2>&1 \
+      && ! python -c 'import torchcodec' >/dev/null 2>&1; then
+    echo "torchcodec is installed but cannot load (no FFmpeg libraries?)"
+    echo "-- removing it; this repo is text-only and never needs it"
     pip uninstall -y -q torchcodec || true
+  fi
+  # Then import the same path the engine uses, so any other import-time
+  # failure surfaces here with its real traceback, not later as a vague
+  # "couldn't measure" from verify.py.
+  if ! python -c 'from vllm import SamplingParams' 2>/tmp/tq101-vllm-import.log; then
+    echo "vLLM still fails to import; last lines of the error:"
+    tail -n 15 /tmp/tq101-vllm-import.log || true
+    echo "See docs/cuda.md (Gotchas) for the known fixes."
+    exit 1
   fi
 
   say "Step 2/3: verifying compression is ACTUALLY engaged"

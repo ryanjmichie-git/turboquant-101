@@ -187,6 +187,42 @@ def _run_vllm_probe(cache_dtype, max_model_len, gpu_mem_util,
     return tokens, log
 
 
+# Known ways a vLLM probe dies BEFORE the engine reports anything. When a
+# probe crashes, the "couldn't find the capacity line" message is true but
+# misleading -- there was never a log to parse. Match the real cause and
+# name its fix. (First entry: fresh WSL2 run, 2026-09-27 -- OSError from
+# torchcodec surfaced here, not at quickstart's import check.)
+PROBE_CRASH_HINTS = [
+    (re.compile(r"(?s)torchcodec.*(Could not load|libtorchcodec)"),
+     "vLLM crashed importing torchcodec (a video library that needs FFmpeg). "
+     "This repo is text-only: run `pip uninstall -y torchcodec`, then re-run "
+     "this script."),
+    (re.compile(r"UVA is not available"),
+     "vLLM needs pinned host memory (UVA). On WSL2 run `wsl --update` in "
+     "PowerShell, reopen Ubuntu, and re-run."),
+    (re.compile(r"(?i)CUDA out of memory|OutOfMemoryError"),
+     "The GPU ran out of memory while loading. Close browsers and other GPU "
+     "apps, or re-run with --gpu-mem-util 0.8."),
+    (re.compile(r"(?i)could not find nvcc|flashinfer.*(jit|compile)"),
+     "FlashInfer tried to JIT-compile CUDA. Export "
+     "VLLM_USE_FLASHINFER_SAMPLER=0 and re-run (docs/cuda.md)."),
+]
+
+
+def diagnose_probe_crash(log: str) -> str | None:
+    """Return a one-line fix if the probe log shows a crash, else None.
+
+    A log with a Python traceback and no PROBE_RESULT line means the engine
+    never came up; that's a crash, not a log-format mismatch."""
+    for pat, hint in PROBE_CRASH_HINTS:
+        if pat.search(log):
+            return hint
+    if "Traceback (most recent call last)" in log and "PROBE_RESULT" not in log:
+        return ("The probe crashed before the engine started -- the traceback "
+                "below is the real error (this is not a log-format problem).")
+    return None
+
+
 def verify_vllm(args) -> int:
     dtype = args.cache_dtype or "turboquant_k3v4_nc"
     print(f"Probing baseline engine (auto dtype), then {dtype} ...")
@@ -205,6 +241,16 @@ def verify_vllm(args) -> int:
         return 1
 
     if base_tokens is None or comp_tokens is None:
+        # Crash first: an engine that never started has no log to parse.
+        for label, tokens, log in (("baseline", base_tokens, base_log),
+                                   ("compressed", comp_tokens, comp_log)):
+            hint = diagnose_probe_crash(log) if tokens is None else None
+            if hint:
+                banner(None, f"The {label} probe crashed before measuring "
+                             f"anything. {hint}")
+                print(f"--- last 30 lines of the {label} probe log ---")
+                print("\n".join(log.strip().splitlines()[-30:]))
+                return 2
         banner(None, "Could not extract KV capacity from engine internals OR "
                      "startup logs. Your vLLM version logs differently -- see "
                      "the patterns at the top of this file and docs/"

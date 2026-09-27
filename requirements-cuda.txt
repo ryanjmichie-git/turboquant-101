@@ -8,11 +8,12 @@
 # torch 2.11.0+cu130, which supports sm_120 out of the box (no nightly
 # needed). See docs/maintainer-notes.md before bumping.
 #
-# Known packaging gotcha: vllm's `torchcodec` dependency hard-fails at
-# `import vllm` on systems without FFmpeg shared libraries (it raises
-# RuntimeError, which escapes vLLM's ImportError guard). This repo is
-# text-only and does not need it: if `python -c "import vllm"` dies with
-# "Could not load libtorchcodec", run `pip uninstall -y torchcodec`.
+# Known packaging gotcha: vllm's `torchcodec` dependency hard-fails on
+# systems without FFmpeg shared libraries (RuntimeError or OSError, which
+# escape vLLM's ImportError guard). It loads lazily, so `import vllm` can
+# pass and the crash appears only at engine start. This repo is text-only
+# and does not need it: if `python -c "import torchcodec"` fails, run
+# `pip uninstall -y torchcodec`.
 # quickstart.sh does this automatically; see docs/cuda.md.
 vllm==0.25.0
 numpy>=1.26

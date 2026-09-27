@@ -94,11 +94,15 @@ default under WSL2. The scripts in this repo set
 WSL2, export it or the engine dies at startup. (Requires a WSL2 kernel
 >= 4.19.121 -- run `wsl --update` if yours is older.)
 
-**"Could not load libtorchcodec" at `import vllm`.** vLLM's `torchcodec`
-dependency hard-fails on machines without FFmpeg shared libraries, and
-the error (RuntimeError) escapes vLLM's ImportError guard. This repo is
-text-only: `pip uninstall -y torchcodec` and move on. quickstart.sh does
-this automatically.
+**"Could not load libtorchcodec" / "Could not load this library:
+.../libtorchcodec_image.so".** vLLM's `torchcodec` dependency hard-fails
+on machines without FFmpeg shared libraries (RuntimeError or OSError, both
+of which escape vLLM's ImportError guard). It is loaded lazily, so a bare
+`import vllm` can succeed and the crash only appears when the engine
+starts -- in `verify.py` this shows up as a `[????]` "probe crashed"
+banner whose log ends in the torchcodec traceback. This repo is
+text-only: `pip uninstall -y torchcodec` and re-run. quickstart.sh now
+tests `import torchcodec` directly and removes it automatically.
 
 **"Could not find nvcc" / FlashInfer JIT errors during engine warm-up.**
 vLLM's FlashInfer sampler JIT-compiles CUDA on first use, which needs a
