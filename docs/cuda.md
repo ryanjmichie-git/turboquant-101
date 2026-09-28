@@ -119,6 +119,19 @@ export LD_LIBRARY_PATH="$(python -c 'import sysconfig; print(sysconfig.get_paths
 python -c "import vllm.cumem_allocator; print('cumem OK')"   # check
 ```
 
+With the fix, the shutdown traceback and the NCCL warning are gone
+(confirmed on the 2026-09-28 WSL2 run). `deep_gemm` now gets past
+libnvrtc but stops at a second, unrelated check at startup -- next entry.
+
+**`--verbose` shows a `deep_gemm` WARNING traceback ending in
+`assert cuda_home is not None`.** Harmless. vLLM's bundled DeepGEMM (FP8
+matrix kernels) looks for a full CUDA toolkit (`CUDA_HOME`, `nvcc`, or
+`/usr/local/cuda`) when it is imported. A fresh WSL2 install has none, so
+vLLM logs the failed import as a WARNING and carries on; Qwen3-4B runs in
+BF16 and never calls those kernels. Default (quiet) output hides it
+because it only shows errors. Don't install a CUDA toolkit just to
+silence it.
+
 **Where did the engine log go?** `demo.py` and `benchmark.py` hide vLLM's
 INFO/WARNING output by default (`VLLM_LOGGING_LEVEL=ERROR`; errors still
 show) and shut the engine down before printing results, so the answer is

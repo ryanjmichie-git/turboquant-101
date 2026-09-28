@@ -22,6 +22,8 @@ for arg in "$@"; do
   esac
 done
 
+START_TIME=$(date +%s)  # for the "finished in" line in the summary
+
 # pip's "new release available" notice tempts beginners into upgrading pip
 # mid-setup; it has nothing to do with this repo.
 export PIP_DISABLE_PIP_VERSION_CHECK=1
@@ -77,7 +79,8 @@ rm -rf "$TQ101_RUN_DIR"
 mkdir -p "$TQ101_RUN_DIR"
 
 summary() {
-  python scripts/summary.py "$TQ101_RUN_DIR"
+  python scripts/summary.py "$TQ101_RUN_DIR" \
+    --elapsed "$(( $(date +%s) - START_TIME ))"
 }
 verbose_hint() {
   if [ -z "$VERBOSE" ]; then
@@ -98,22 +101,25 @@ fi
 
 # ---- 3. platform detection ------------------------------------------------
 if command -v nvidia-smi >/dev/null 2>&1; then
-  say "NVIDIA GPU detected -> vLLM path"
+  # Skip the install when the pinned vLLM is already present. Re-running
+  # `pip install -r` is not a no-op: pip re-resolves vLLM's dependencies and
+  # reinstalls the torchcodec the guard below just removed, so every rerun
+  # would download it and print the removal message again (seen on the
+  # 2026-09-27 WSL2 rerun). One header either way (reruns used to print two).
+  VLLM_PIN="$(sed -n 's/^vllm==\([^[:space:]]*\).*/\1/p' requirements-cuda.txt)"
+  VLLM_READY=0
+  if [ -n "$VLLM_PIN" ] && python -c "import importlib.metadata as m, sys; sys.exit(0 if m.version('vllm') == sys.argv[1] else 1)" "$VLLM_PIN" 2>/dev/null; then
+    VLLM_READY=1
+    say "NVIDIA GPU detected -> vLLM path (vLLM $VLLM_PIN already installed)"
+  else
+    say "NVIDIA GPU detected -> vLLM path"
+  fi
   case "$(pwd)" in /mnt/*)
     echo "WARNING: you are under /mnt/ (Windows filesystem). On WSL2, move"
     echo "this repo to your Linux home (e.g. ~/turboquant-101) first --"
     echo "model loading from /mnt/ is painfully slow. Continuing anyway."
   ;; esac
-
-  # Skip the install when the pinned vLLM is already present. Re-running
-  # `pip install -r` is not a no-op: pip re-resolves vLLM's dependencies and
-  # reinstalls the torchcodec the guard below just removed, so every rerun
-  # would download it and print the removal message again (seen on the
-  # 2026-09-27 WSL2 rerun).
-  VLLM_PIN="$(sed -n 's/^vllm==\([^[:space:]]*\).*/\1/p' requirements-cuda.txt)"
-  if [ -n "$VLLM_PIN" ] && python -c "import importlib.metadata as m, sys; sys.exit(0 if m.version('vllm') == sys.argv[1] else 1)" "$VLLM_PIN" 2>/dev/null; then
-    say "vLLM $VLLM_PIN already installed -- skipping the big download"
-  else
+  if [ "$VLLM_READY" = 0 ]; then
     say "Installing vLLM (this is a large download; grab a coffee)"
     pip install -q -r requirements-cuda.txt
   fi

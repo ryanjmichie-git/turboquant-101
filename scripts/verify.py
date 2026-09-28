@@ -51,7 +51,7 @@ HF_GGUF = "Qwen/Qwen3-4B-GGUF:Q4_K_M"  # llama-server auto-downloads via -hf
 # 0.85 for headroom on busy desktops; only absolute counts differ.
 REFERENCE_GPU_MEM_UTIL = 0.90
 PASS_RATIO = 2.0  # compressed capacity must be at least this x baseline
-EXPECT_HINT = "~3-4.5x is typical for k3v4-style settings"
+EXPECT_HINT = "typical for this setting: ~3-4.5x"
 
 
 def banner(ok: bool | None, msg: str):
@@ -60,7 +60,7 @@ def banner(ok: bool | None, msg: str):
     tag = {True: "PASS", False: "FAIL", None: "????"}[ok]
     line = "=" * 72
     body = ("\n" + " " * 10).join(msg.split("\n"))
-    print(f"\n{line}\n  [{tag}]  {body}\n{line}\n")
+    print(f"\n{line}\n  [{tag}]  {body}\n{line}")
 
 
 # ==========================================================================
@@ -161,6 +161,25 @@ def _parse_capacity(log: str) -> tuple[int | None, str | None, str | None]:
         if tokens is not None:
             return tokens, "attr", f"attr chain: {data.get('attr_chain')}"
     return None, None, None
+
+
+# The engine's own words, quoted verbatim under --verbose: its capacity
+# line and which attention backend(s) it chose. The compressed engine
+# names TURBOQUANT (and FLASH_ATTN too -- vLLM keeps the first and last
+# two layers uncompressed as a quality guard).
+BACKEND_LINE = re.compile(r"Using \w+ attention backend")
+
+
+def engine_evidence(log: str) -> list[str]:
+    """Distinct evidence phrases from one probe log, in log order."""
+    found = []
+    for pat, _ in VLLM_LOG_PATTERNS:
+        hit = pat.search(log)
+        if hit:
+            found.append(hit.group(0).strip())
+            break
+    found += [m.group(0) for m in BACKEND_LINE.finditer(log)]
+    return list(dict.fromkeys(found))
 
 
 # Plain-English name for where a capacity number came from.
@@ -267,13 +286,17 @@ def verify_vllm(args) -> int:
     print("(Each load takes a minute or so; the first run also downloads the "
           "model.)\n")
 
-    print("  loading with the normal cache ...", flush=True)
+    # The probe's output is captured, so nothing can land mid-line here.
+    print("  loading with the normal cache ...", end="", flush=True)
+    t0 = time.perf_counter()
     base_tokens, base_log = _run_vllm_probe(
         None, args.max_model_len, args.gpu_mem_util, args.hf_overrides)
-    print(f"  loading with {dtype} ...", flush=True)
+    print(f" done ({time.perf_counter() - t0:.0f} s)")
+    print(f"  loading with {dtype} ...", end="", flush=True)
+    t0 = time.perf_counter()
     comp_tokens, comp_log = _run_vllm_probe(
         dtype, args.max_model_len, args.gpu_mem_util, args.hf_overrides)
-    print()
+    print(f" done ({time.perf_counter() - t0:.0f} s)\n")
 
     # Sanity check: did the engine actually accept the dtype?
     if re.search(r"(?i)(invalid|unsupported).{0,40}kv[_ ]cache", comp_log):
@@ -307,9 +330,9 @@ def verify_vllm(args) -> int:
     print(f"  Tokens of KV cache that fit in the same GPU memory budget "
           f"({args.gpu_mem_util:.0%}):")
     print(f"    {'normal cache (baseline)':<{width}}  {base_tokens:>9,}")
-    print(f"    {comp_label:<{width}}  {comp_tokens:>9,}   -> {ratio:.2f}x "
-          f"more")
-    print(f"    ({EXPECT_HINT})")
+    print(f"    {comp_label:<{width}}  {comp_tokens:>9,}   -> {ratio:.2f}x more")
+    if dtype.startswith("turboquant_k3v4"):
+        print(f"    ({EXPECT_HINT})")
 
     # Where the numbers came from -- in words by default; the exact regex
     # or attribute chain with --verbose. The attribute-fallback caveat is
@@ -323,20 +346,24 @@ def verify_vllm(args) -> int:
         print(f"  Source: {'; '.join(dict.fromkeys(known))}.")
     if "attr" in kinds:
         print(ATTR_WARNING)
+    # Token counts scale with the memory budget; the ratio doesn't. Say so,
+    # or readers compare these counts with the README's (measured at 0.9,
+    # like demo.py/benchmark.py) and think something is wrong. The budget
+    # itself is already in the table header above.
+    if abs(args.gpu_mem_util - REFERENCE_GPU_MEM_UTIL) > 1e-9:
+        print(f"  (The README's 44,336 -> 140,320 used "
+              f"{REFERENCE_GPU_MEM_UTIL:.0%} -- compare ratios, not counts.)")
     if verbose:
         for label, (_, _, detail) in zip(("baseline", "compressed"), parsed):
             if detail:
                 print(f"  ({label} capacity via {detail})")
-
-    # Token counts scale with the memory budget; the ratio doesn't. Say so,
-    # or readers compare these counts with the README's (measured at 0.9,
-    # like demo.py/benchmark.py) and think something is wrong.
-    util_note = f"  (Both counts measured at {args.gpu_mem_util:.0%} GPU memory"
-    if abs(args.gpu_mem_util - REFERENCE_GPU_MEM_UTIL) > 1e-9:
-        util_note += (f". The README's 44,336 -> 140,320\n  are from "
-                      f"{REFERENCE_GPU_MEM_UTIL:.0%}, so they're higher -- "
-                      f"compare ratios, not counts")
-    print(util_note + ".)")
+        print("  What each engine logged (verbatim):")
+        for label, log in (("baseline", base_log), ("compressed", comp_log)):
+            lines = engine_evidence(log) or ["(no evidence lines found)"]
+            for i, phrase in enumerate(lines):
+                head = f"{label}:" if i == 0 else ""
+                quoted = phrase if phrase.startswith("(") else f'"{phrase}"'
+                print(f"    {head:<12}{quoted}")
 
     passed = ratio >= PASS_RATIO
     record("verify", {

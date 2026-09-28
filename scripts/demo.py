@@ -34,7 +34,9 @@ def format_row(ok: bool, needle: str, text: str, gen_tokens: int,
     answer = text.strip()
     row = f"  {'FOUND ' if ok else 'MISSED'}  {needle}"
     if answer != needle or verbose:
-        row = f"{row:<30}  model answered: {answer[:40]!r}"
+        # fits 80 columns: 30 + 18 + at most 32 for the quoted answer
+        shown = answer if len(answer) <= 30 else answer[:27] + "..."
+        row = f"{row:<30}  model answered: {shown!r}"
     if verbose:
         rate = gen_tokens / seconds if seconds > 0 else 0
         row += (f"\n{'':<10}{seconds:.1f} s, {rate:.1f} tok/s -- includes "
@@ -69,17 +71,25 @@ def main():
     # writes its own output, and the answer should be the last thing on
     # screen, not buried above it.
     rows, hits = [], 0
+    # Progress on ONE line when quiet. With --verbose, vLLM logs mid-run
+    # (e.g. "Detected the chat template content format"), which would land
+    # in the middle of that line -- so one line per trial instead.
     try:
-        print("  trial", end="", flush=True)
+        if not args.verbose:
+            print("  trial", end="", flush=True)
         for i, t in enumerate(trials, 1):
-            print(f" {i}/{len(trials)}", end="", flush=True)
+            if args.verbose:
+                print(f"  trial {i}/{len(trials)}...", flush=True)
+            else:
+                print(f" {i}/{len(trials)}", end="", flush=True)
             prompt = build_prompt(corpus, t, backend.count_tokens)
             res = backend.generate(prompt)
             ok = score(res.text, t.needle)
             hits += ok
             rows.append(format_row(ok, t.needle, res.text, res.gen_tokens,
                                    res.seconds, args.verbose))
-        print(" done", flush=True)
+        if not args.verbose:
+            print(" done", flush=True)
     finally:
         backend.close()
 
@@ -90,17 +100,16 @@ def main():
     print("\n".join(rows))
     print(f"\n  Retrieved {hits}/{total}.")
     if hits == total:
-        print(f"  No damage this easy test can detect ({args.context:,}-token "
-              f"documents, codes at 50% depth).")
+        print(f"  No damage this easy test can detect ({args.context:,} tokens, "
+              f"50% depth).")
         if not under_quickstart():
             print("  That is not proof quality held: the A/B benchmark "
                   "(scripts/benchmark.py)\n  compares against the "
                   "uncompressed cache at more depths and lengths.")
-        print()
     else:
         print("  Misses at 8K/50% depth usually mean thinking-mode leaked "
-              "(<think> in output above?),\n  the wrong model loaded, or the "
-              "context didn't fit. Run scripts/verify.py first.\n")
+              "(<think> in an\n  answer above?), the wrong model loaded, or "
+              "the context didn't fit.\n  Run scripts/verify.py first.")
 
 
 if __name__ == "__main__":

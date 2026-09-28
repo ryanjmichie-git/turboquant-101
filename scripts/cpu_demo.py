@@ -287,8 +287,7 @@ Rule for the README of your life: quote the compression ratio as a cache
 property, quote context expansion only as a measured, hardware-specific
 result -- and never present one as the other. The bigger the model and the
 longer the context, the more KV dominates and the closer the two numbers
-get.
-"""
+get."""
     )
 
 
@@ -333,8 +332,7 @@ Rotation spreads those outliers across all 128 dimensions, so the same
 (attention is sensitive to it); on this small toy test it differs from
 plain rotation by {gap} of {rot['n_queries']} queries.
 Full walk-through (memory table, error metrics, ratio vs. context):
-  python scripts/cpu_demo.py
-"""
+  python scripts/cpu_demo.py"""
     )
 
 
@@ -368,7 +366,7 @@ def main():
     if under_quickstart():
         return  # quickstart.sh prints its own next steps
     print(
-        "Next step: run the real thing on a model.\n"
+        "\nNext step: run the real thing on a model.\n"
         "  NVIDIA GPU:     see docs/cuda.md   (vLLM, turboquant_k3v4_nc)\n"
         "  Apple Silicon:  see docs/apple-silicon.md (llama.cpp KV cache types)\n"
         "Or just run ./quickstart.sh and let it detect your platform.\n"

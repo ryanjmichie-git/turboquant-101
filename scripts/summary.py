@@ -8,11 +8,12 @@ can't drift from what the steps printed. Each line says where its number
 came from: synthetic vectors on the CPU, or a measurement on this machine.
 Upstream / README figures never appear here.
 
-  python scripts/summary.py <run-dir>
+  python scripts/summary.py <run-dir> [--elapsed SECONDS]
 """
 
 from __future__ import annotations
 
+import argparse
 import pathlib
 import sys
 
@@ -29,7 +30,12 @@ def _item(n: int, label: str, lines: list[str]) -> list[str]:
     return [head + lines[0]] + [pad + ln for ln in lines[1:]]
 
 
-def build(directory: pathlib.Path) -> list[str]:
+def format_elapsed(seconds: int) -> str:
+    minutes, secs = divmod(max(0, int(seconds)), 60)
+    return f"{minutes} min {secs} s" if minutes else f"{secs} s"
+
+
+def build(directory: pathlib.Path, elapsed: int | None = None) -> list[str]:
     cpu = load("cpu", directory)
     ver = load("verify", directory)
     demo = load("demo", directory)
@@ -92,16 +98,24 @@ def build(directory: pathlib.Path) -> list[str]:
     if caveats:
         out += ["", "  What this does NOT show:"]
         out += [f"  - {c}" for c in caveats]
+    if elapsed is not None:
+        out += ["", f"  Whole run took {format_elapsed(elapsed)} "
+                    f"(including setup)."]
     out.append(RULE)
     return out
 
 
 def main() -> int:
-    directory = pathlib.Path(sys.argv[1]) if len(sys.argv) > 1 else run_dir()
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("run_dir", nargs="?", default=None)
+    ap.add_argument("--elapsed", type=int, default=None,
+                    help="seconds since quickstart started")
+    args = ap.parse_args()
+    directory = pathlib.Path(args.run_dir) if args.run_dir else run_dir()
     if directory is None:
         print(f"usage: summary.py <run-dir>   (or set {ENV_VAR})", file=sys.stderr)
         return 2
-    lines = build(directory)
+    lines = build(directory, args.elapsed)
     if lines:
         print("\n" + "\n".join(lines))
     return 0

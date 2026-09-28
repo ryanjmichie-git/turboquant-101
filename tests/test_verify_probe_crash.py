@@ -67,11 +67,12 @@ def _pass_run(monkeypatch, capsys, util):
 
 def test_default_util_explains_readme_mismatch(monkeypatch, capsys):
     out = _pass_run(monkeypatch, capsys, 0.85)
-    assert "measured at 85% GPU memory" in out
+    assert "same GPU memory budget (85%)" in out
     assert "44,336 -> 140,320" in out and "90%" in out
+    assert "compare ratios" in out
 
 
 def test_reference_util_has_no_mismatch_note(monkeypatch, capsys):
     out = _pass_run(monkeypatch, capsys, 0.90)
-    assert "measured at 90% GPU memory" in out
+    assert "same GPU memory budget (90%)" in out
     assert "44,336" not in out

@@ -201,3 +201,98 @@ def test_quickstart_passes_verbose_and_prints_summary():
     assert "verify.py --backend vllm $VERBOSE" in text
     assert "--cache-dtype turboquant_k3v4_nc $VERBOSE" in text
     assert "TQ101_RUN_DIR" in text and "scripts/summary.py" in text
+
+
+# ------------------------------------------- round 2 (2026-09-28 verbose run)
+class _FakeBackend:
+    """Echoes each needle back, so demo.main runs with no GPU."""
+
+    def __init__(self):
+        self.code = None
+
+    def count_tokens(self, text):
+        return len(text) // 4
+
+    def generate(self, prompt):
+        import re
+        code = re.search(r"The secret code is ([A-Z]+-\d+)", prompt).group(1)
+        from niah import GenResult
+        return GenResult(text=code, gen_tokens=6, seconds=1.2)
+
+    def describe(self):
+        return "fake / kv_cache_dtype=turboquant_k3v4_nc"
+
+    def close(self):
+        pass
+
+
+def _run_demo(monkeypatch, capsys, *extra):
+    monkeypatch.setattr(demo, "build_backend", lambda args: _FakeBackend())
+    monkeypatch.setattr(sys, "argv", ["demo.py", "--backend", "llamacpp", *extra])
+    demo.main()
+    return capsys.readouterr().out
+
+
+def test_demo_output_fits_80_columns(monkeypatch, capsys):
+    for extra in ((), ("--verbose",)):
+        out = _run_demo(monkeypatch, capsys, *extra)
+        assert "Retrieved 5/5." in out
+        assert max(len(line) for line in out.splitlines()) <= 80, extra
+
+
+def test_demo_verbose_puts_each_trial_on_its_own_line(monkeypatch, capsys):
+    """vLLM logs mid-run under --verbose; a shared progress line got split
+    ("trial 1/5INFO ... [hf.py:548] ...") on the 2026-09-28 run."""
+    quiet = _run_demo(monkeypatch, capsys)
+    assert "  trial 1/5 2/5 3/5 4/5 5/5 done" in quiet
+    loud = _run_demo(monkeypatch, capsys, "--verbose")
+    assert all(f"  trial {i}/5..." in loud.splitlines() for i in range(1, 6))
+
+
+def test_demo_answer_truncated_to_fit():
+    row = demo.format_row(True, "FATHOM-4879",
+                          "Sure! The secret code in the document is FATHOM-4879.",
+                          20, 1.0)
+    assert len(row) <= 80 and "..." in row
+
+
+BASE_LOG = ("INFO Using FLASH_ATTN attention backend out of potential "
+            "backends\nINFO GPU KV cache size: 38,544 tokens\n")
+COMP_LOG = ("INFO Using FLASH_ATTN attention backend out of x\nINFO Using "
+            "TURBOQUANT attention backend out of potential backends\n"
+            "INFO GPU KV cache size: 121,984 tokens\n")
+
+
+def test_verbose_verify_quotes_the_engines(monkeypatch, capsys):
+    _, out = _verify_out(monkeypatch, capsys, logs=[BASE_LOG, COMP_LOG],
+                         verbose=True)
+    assert "What each engine logged (verbatim):" in out
+    assert '"GPU KV cache size: 38,544 tokens"' in out
+    assert '"Using TURBOQUANT attention backend"' in out
+    quotes = out.split("What each engine logged")[1].split("=" * 72)[0]
+    assert max(len(line) for line in quotes.splitlines()) <= 80
+
+
+def test_default_verify_has_no_engine_quotes_and_times_each_load(monkeypatch, capsys):
+    _, out = _verify_out(monkeypatch, capsys, logs=[BASE_LOG, COMP_LOG])
+    assert "What each engine logged" not in out
+    assert "loading with the normal cache ... done (" in out
+    assert out.rstrip().endswith("=" * 72)  # banner ends the step, no blank
+
+
+def test_summary_reports_elapsed(full_run):
+    text = "\n".join(summary.build(full_run, elapsed=85))
+    assert "Whole run took 1 min 25 s" in text
+    assert summary.format_elapsed(42) == "42 s"
+
+
+def test_quickstart_prints_one_platform_header():
+    text = (ROOT / "quickstart.sh").read_text(encoding="utf-8")
+    assert 'say "vLLM $VLLM_PIN already installed' not in text
+    assert "vLLM path (vLLM $VLLM_PIN already installed)" in text
+    assert '--elapsed "$(( $(date +%s) - START_TIME ))"' in text
+
+
+def test_cpu_brief_has_no_trailing_blank_line(tmp_path):
+    out = _cpu_demo("--brief", run_dir=tmp_path)
+    assert out.endswith("python scripts/cpu_demo.py\n")
