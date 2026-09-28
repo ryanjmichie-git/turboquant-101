@@ -104,14 +104,20 @@ banner whose log ends in the torchcodec traceback. This repo is
 text-only: `pip uninstall -y torchcodec` and re-run. quickstart.sh now
 tests `import torchcodec` directly and removes it automatically.
 
-**"ImportError: libnvrtc.so.13: cannot open shared object file" (harmless).**
-Printed twice on every engine run: once at startup as a WARNING traceback
-(`vllm.third_party.deep_gemm` failed to import) and once at shutdown, after
-results are printed (`vllm.cumem_allocator`). Neither component is used
-here -- DeepGEMM serves FP8 matmuls for other model families, and the cumem
-allocator backs vLLM's sleep mode. Verify still PASSes and the demo still
-finds 5/5 (measured on the reference RTX 5080, 2026-09-27). Ignore it; if
-a result line is missing, look elsewhere first.
+**"ImportError: libnvrtc.so.13: cannot open shared object file".** The
+file IS installed -- pip puts it in `.venv/.../site-packages/nvidia/cu13/lib`
+-- but two vLLM extensions (`deep_gemm`, `cumem_allocator`) rely on the
+system loader, which doesn't search there. Symptoms: a WARNING traceback at
+engine startup, and a second traceback during engine shutdown that also
+skips cleanup (NCCL then warns "destroy_process_group() was not called").
+Results were unaffected. The scripts in this repo now add that folder to
+`LD_LIBRARY_PATH` for you (`niah/cuda_env.py`); if you drive vLLM yourself,
+do it before starting it:
+
+```bash
+export LD_LIBRARY_PATH="$(python -c 'import sysconfig; print(sysconfig.get_paths()["purelib"])')/nvidia/cu13/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+python -c "import vllm.cumem_allocator; print('cumem OK')"   # check
+```
 
 **Where did the engine log go?** `demo.py` and `benchmark.py` hide vLLM's
 INFO/WARNING output by default (`VLLM_LOGGING_LEVEL=ERROR`; errors still
@@ -191,7 +197,8 @@ vllm serve Qwen/Qwen3-4B --kv-cache-dtype turboquant_4bit_nc \
 Driving vLLM yourself means the scripts' automatic env vars don't
 apply: under WSL2, `export VLLM_WSL2_ENABLE_PIN_MEMORY=1` first, and
 add `VLLM_USE_FLASHINFER_SAMPLER=0` if warm-up hits the FlashInfer
-gotcha above. The server listens on port 8000:
+gotcha above. Export the `LD_LIBRARY_PATH` line from the libnvrtc
+gotcha too, or the server prints two harmless-but-alarming tracebacks. The server listens on port 8000:
 
 ```bash
 curl http://localhost:8000/v1/chat/completions \

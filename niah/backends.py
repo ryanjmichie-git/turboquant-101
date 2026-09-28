@@ -80,6 +80,11 @@ class VLLMBackend:
         # only does greedy decoding, so default to vLLM's native sampler.
         # Export VLLM_USE_FLASHINFER_SAMPLER=1 to override.
         os.environ.setdefault("VLLM_USE_FLASHINFER_SAMPLER", "0")
+        # Let vLLM's engine process find pip's libnvrtc.so.13 (see
+        # niah/cuda_env.py); without it, a traceback at startup and another
+        # at shutdown. Inherited by the engine process spawned below.
+        from .cuda_env import with_cu13_libs
+        with_cu13_libs(os.environ)
 
         from vllm import LLM, SamplingParams  # lazy: only the CUDA path needs it
 

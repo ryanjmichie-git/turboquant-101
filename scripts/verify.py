@@ -141,6 +141,11 @@ def _run_vllm_probe(cache_dtype, max_model_len, gpu_mem_util,
     # greedy decoding, so default to vLLM's native sampler. Export
     # VLLM_USE_FLASHINFER_SAMPLER=1 to override.
     env.setdefault("VLLM_USE_FLASHINFER_SAMPLER", "0")
+    # Put pip's CUDA 13 libraries (libnvrtc.so.13) on the loader path for
+    # the probe process -- see niah/cuda_env.py.
+    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    from niah.cuda_env import with_cu13_libs
+    with_cu13_libs(env)
     proc = subprocess.run(cmd, capture_output=True, text=True, env=env, timeout=1800)
     log = proc.stdout + "\n" + proc.stderr
 
