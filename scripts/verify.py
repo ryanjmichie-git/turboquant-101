@@ -283,7 +283,7 @@ def verify_vllm(args) -> int:
     verbose = getattr(args, "verbose", False)
     print(f"Loading the model twice -- normal cache, then {dtype} -- and")
     print("reading how many tokens of KV cache vLLM says fit each time.")
-    print("(Each load takes a minute or so; the first run also downloads the "
+    print("(Each load takes under a minute once ./setup.sh has downloaded the "
           "model.)\n")
 
     # The probe's output is captured, so nothing can land mid-line here.

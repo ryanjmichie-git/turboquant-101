@@ -96,3 +96,29 @@ def test_is_cached_requires_every_shard(monkeypatch, tmp_path):
 def test_is_cached_false_when_nothing_downloaded(monkeypatch):
     _fake_hub(monkeypatch, None)
     assert dm.is_cached() is False
+
+
+# ---- one progress line (2026-09-28 fresh-download run: three Hub bars, one
+# reading 3.89 kB/s, plus the Hub's HF_TOKEN warning printed inside them)
+def test_hub_bars_and_warning_off_before_hub_import():
+    assert dm.os.environ["HF_HUB_DISABLE_PROGRESS_BARS"] == "1"
+    assert dm.os.environ["HF_HUB_VERBOSITY"] == "error"
+    text = (ROOT / "scripts" / "download_model.py").read_text(encoding="utf-8")
+    # the env defaults must be set before anything imports huggingface_hub
+    assert text.index('setdefault("HF_HUB_VERBOSITY"') < text.index(
+        "from huggingface_hub import")
+
+
+def test_progress_line():
+    line = dm.progress_line(4 * 2**30, 8 * 2**30, 125)
+    assert line == "  4.0 of 8.0 GB (50%)  33 MB/s  2 min 05 s"
+    assert len(line) <= 60
+    assert "GB so far" in dm.progress_line(2**30, None, 10)
+    assert "(100%)" in dm.progress_line(9 * 2**30, 8 * 2**30, 10)  # capped
+
+
+def test_bytes_on_disk_counts_partial_files(tmp_path):
+    (tmp_path / "abc").write_bytes(b"x" * 10)
+    (tmp_path / "def.incomplete").write_bytes(b"x" * 5)
+    assert dm._bytes_on_disk(tmp_path) == 15
+    assert dm._bytes_on_disk(tmp_path / "missing") == 0
