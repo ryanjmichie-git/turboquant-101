@@ -81,7 +81,7 @@ through this list on the RTX 5080 and the M4.
 
 6. **Model resolution.** Confirm `-hf Qwen/Qwen3-4B-GGUF:Q4_K_M`
    resolves and downloads on current brew llama.cpp. Fallbacks if not:
-   the unsloth or bartowski Qwen3-4B GGUF repos; update quickstart.sh
+   the unsloth or bartowski Qwen3-4B GGUF repos; update setup.sh, quickstart.sh
    and verify.py's `HF_GGUF` default.
 
    > RESOLVED: resolves and downloads (2.32 GiB) on brew llama.cpp

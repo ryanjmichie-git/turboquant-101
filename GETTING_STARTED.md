@@ -72,15 +72,30 @@ git clone https://github.com/ryanjmichie-git/turboquant-101
 cd turboquant-101
 ```
 
-## Step 3 — run one script
+## Step 3 — install and download, once
+
+```bash
+./setup.sh
+```
+
+This does all the slow, one-time work: an isolated Python environment
+(`.venv` — it won't touch anything else on your system), the inference
+engine (vLLM on NVIDIA; on a Mac it checks for llama.cpp), and the model
+download, with a progress bar. It checks your free disk space first.
+Nothing is measured here. Re-running it is safe and quick.
+
+**Heads up on downloads:** ~7.6 GB of model on the NVIDIA path (~2.5 GB
+on a Mac), plus vLLM itself on NVIDIA (also large). It's a coffee break —
+a good time to read `LEARN.md`, which needs no GPU.
+
+## Step 4 — run the checks
 
 ```bash
 ./quickstart.sh
 ```
 
-That's the whole interface. It sets up an isolated Python environment
-(`.venv` — it won't touch anything else on your system), then does three
-things:
+That's the whole interface (it runs `setup.sh` first if you skipped it).
+It does three things:
 
 1. **CPU demo (~1 minute, every machine).** Runs the compression math on
    fake attention data. Watch the table it prints: naive 3-bit
@@ -96,11 +111,9 @@ things:
    documents and asks the model to find them, with the compressed cache
    on. Expect 5/5.
 
-**Heads up on downloads:** the first GPU run downloads the model —
-~7.6 GB on the NVIDIA path, ~2.5 GB on the Mac — plus vLLM itself on
-NVIDIA (also large). First run is a coffee break; later runs are fast.
+Once setup is done, a run takes about 1–2 minutes on an RTX 5080.
 
-## Step 4 — read your results
+## Step 5 — read your results
 
 - CPU demo: the story is the *gap between rows* (naive vs rotated), not
   the exact percentages.
@@ -112,7 +125,7 @@ NVIDIA (also large). First run is a coffee break; later runs are fast.
   A perfect score here does NOT mean compression is harmless everywhere
   — see `LEARN.md` §4 for what this test can't detect.
 
-## Step 5 (optional) — the full benchmark
+## Step 6 (optional) — the full benchmark
 
 When you're curious, run the real A/B experiment (60 trials per side,
 identical documents with compression off vs on):

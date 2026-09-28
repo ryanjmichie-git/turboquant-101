@@ -47,10 +47,10 @@ def test_verify_vllm_reports_crash_not_log_format(monkeypatch, capsys):
     assert "logs differently" not in out
 
 
-def test_quickstart_tests_torchcodec_itself():
+def test_setup_tests_torchcodec_itself():
     """`import vllm` alone passes while torchcodec is broken (lazy import),
     so the guard must import torchcodec directly and then the engine path."""
-    text = (ROOT / "quickstart.sh").read_text(encoding="utf-8")
+    text = (ROOT / "setup.sh").read_text(encoding="utf-8")
     assert "python -c 'import torchcodec'" in text
     assert "from vllm import SamplingParams" in text
     assert "if ! python -c 'import vllm'" not in text

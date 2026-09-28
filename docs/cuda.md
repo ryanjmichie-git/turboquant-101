@@ -101,8 +101,9 @@ of which escape vLLM's ImportError guard). It is loaded lazily, so a bare
 `import vllm` can succeed and the crash only appears when the engine
 starts -- in `verify.py` this shows up as a `[????]` "probe crashed"
 banner whose log ends in the torchcodec traceback. This repo is
-text-only: `pip uninstall -y torchcodec` and re-run. quickstart.sh now
-tests `import torchcodec` directly and removes it automatically.
+text-only: `pip uninstall -y torchcodec` and re-run. setup.sh (which
+quickstart.sh runs first) tests `import torchcodec` directly and removes
+it automatically.
 
 **"ImportError: libnvrtc.so.13: cannot open shared object file".** The
 file IS installed -- pip puts it in `.venv/.../site-packages/nvidia/cu13/lib`

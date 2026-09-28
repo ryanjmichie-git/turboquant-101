@@ -286,11 +286,15 @@ def test_summary_reports_elapsed(full_run):
     assert summary.format_elapsed(42) == "42 s"
 
 
-def test_quickstart_prints_one_platform_header():
+def test_quickstart_delegates_setup_and_prints_one_ready_line():
+    """Installs/downloads moved to setup.sh (2026-09-28); quickstart runs it
+    with --brief, which prints a single "Setup ready" header when done."""
     text = (ROOT / "quickstart.sh").read_text(encoding="utf-8")
-    assert 'say "vLLM $VLLM_PIN already installed' not in text
-    assert "vLLM path (vLLM $VLLM_PIN already installed)" in text
+    assert "bash ./setup.sh --brief" in text
+    assert "pip install" not in text and "requirements-cuda.txt" not in text
     assert '--elapsed "$(( $(date +%s) - START_TIME ))"' in text
+    setup = (ROOT / "setup.sh").read_text(encoding="utf-8")
+    assert 'say "Setup ready: $PLATFORM"' in setup
 
 
 def test_cpu_brief_has_no_trailing_blank_line(tmp_path):

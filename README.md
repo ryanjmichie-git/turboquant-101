@@ -24,11 +24,14 @@ actually engaged, and measure what the tradeoff costs on your hardware.
 
 ```bash
 git clone <this-repo> && cd turboquant-101
-./quickstart.sh            # add --verbose for the full detail at every step
+./setup.sh                 # once: installs + model download (~8 GB on NVIDIA)
+./quickstart.sh            # the checks; add --verbose for the full detail
 ```
 
-That's it. The script runs the CPU demo everywhere, then detects your
-platform: NVIDIA GPUs get the vLLM path with the real
+That's it. `setup.sh` does the slow part once, with visible progress and
+a disk-space check first; nothing is measured there. `quickstart.sh`
+(which runs setup for you if you skipped it) runs the CPU demo
+everywhere, then detects your platform: NVIDIA GPUs get the vLLM path with the real
 `turboquant_k3v4_nc` cache (docs/cuda.md), Apple Silicon gets the
 llama.cpp quantized-KV path (same concept, but not the TurboQuant
 algorithm -- docs/apple-silicon.md has the honest story).
@@ -117,12 +120,14 @@ Honesty section, because this field has a hype problem:
 ## Map
 
 ```
-quickstart.sh          platform-detecting entry point
+setup.sh               one-time installs + model download (run first)
+quickstart.sh          platform-detecting entry point: the three checks
 GETTING_STARTED.md     the walkthrough for total beginners
 scripts/cpu_demo.py    the quantizer math, no GPU (start here)
 scripts/verify.py      proves compression is actually engaged  <- run this
 scripts/demo.py        5-needle retrieval quick win
 scripts/benchmark.py   full A/B protocol + report table
+scripts/download_model.py  the model download setup.sh runs
 niah/                  the benchmark protocol + backend adapters
 docs/cuda.md           NVIDIA/WSL2 setup and gotchas
 docs/apple-silicon.md  Mac setup (and the honest llama.cpp story)

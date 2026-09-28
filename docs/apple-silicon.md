@@ -22,7 +22,8 @@ TurboQuant types.
 
 ```bash
 brew install llama.cpp
-./quickstart.sh        # or by hand:
+./setup.sh             # once: checks llama.cpp, downloads the GGUF
+./quickstart.sh        # the checks -- or by hand:
 
 llama-server -hf Qwen/Qwen3-4B-GGUF:Q4_K_M -c 16384 -fa on \
   -ctk q8_0 -ctv q8_0 --port 8080
