@@ -54,3 +54,24 @@ def test_quickstart_tests_torchcodec_itself():
     assert "python -c 'import torchcodec'" in text
     assert "from vllm import SamplingParams" in text
     assert "if ! python -c 'import vllm'" not in text
+
+
+def _pass_run(monkeypatch, capsys, util):
+    counts = iter([(38544, "log"), (121984, "log")])
+    monkeypatch.setattr(verify, "_run_vllm_probe", lambda *a, **k: next(counts))
+    args = types.SimpleNamespace(cache_dtype=None, max_model_len=8192,
+                                 gpu_mem_util=util, hf_overrides=None)
+    assert verify.verify_vllm(args) == 0
+    return capsys.readouterr().out
+
+
+def test_default_util_explains_readme_mismatch(monkeypatch, capsys):
+    out = _pass_run(monkeypatch, capsys, 0.85)
+    assert "measured at 85% GPU memory" in out
+    assert "44,336 -> 140,320" in out and "90%" in out
+
+
+def test_reference_util_has_no_mismatch_note(monkeypatch, capsys):
+    out = _pass_run(monkeypatch, capsys, 0.90)
+    assert "measured at 90% GPU memory" in out
+    assert "44,336" not in out

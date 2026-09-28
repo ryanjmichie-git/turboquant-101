@@ -40,6 +40,10 @@ import time
 DEFAULT_MODEL = "Qwen/Qwen3-4B"
 HF_GGUF = "Qwen/Qwen3-4B-GGUF:Q4_K_M"  # llama-server auto-downloads via -hf
 
+# gpu_memory_utilization behind the README / VALIDATION_REPORT capacity
+# figures (and demo.py / benchmark.py's default). verify.py defaults to
+# 0.85 for headroom on busy desktops; only absolute counts differ.
+REFERENCE_GPU_MEM_UTIL = 0.90
 PASS_RATIO = 2.0  # compressed capacity must be at least this x baseline
 EXPECT_HINT = "~3-4.5x is typical for k3v4-style settings"
 
@@ -268,6 +272,15 @@ def verify_vllm(args) -> int:
     print(f"  baseline KV capacity:   {base_tokens:>10,} tokens")
     print(f"  compressed KV capacity: {comp_tokens:>10,} tokens")
     print(f"  ratio:                  {ratio:>10.2f}x   ({EXPECT_HINT})")
+    # Token counts scale with the memory budget; the ratio doesn't. Say so,
+    # or readers compare these counts with the README's (measured at 0.9,
+    # like demo.py/benchmark.py) and think something is wrong.
+    util_note = f"  (measured at {args.gpu_mem_util:.0%} GPU memory"
+    if abs(args.gpu_mem_util - REFERENCE_GPU_MEM_UTIL) > 1e-9:
+        util_note += (f"; the README's 44,336 -> 140,320 were measured at "
+                      f"{REFERENCE_GPU_MEM_UTIL:.0%}. Token counts scale with "
+                      f"the budget -- the ratio is what matters")
+    print(util_note + ")")
 
     if ratio >= PASS_RATIO:
         banner(True, f"Compression is ACTIVE ({ratio:.2f}x more KV capacity). "
