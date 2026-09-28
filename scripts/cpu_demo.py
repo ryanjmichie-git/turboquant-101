@@ -9,14 +9,21 @@ vector norm. It is NOT the production kernel (real implementations use
 Lloyd-Max codebooks and fused GPU/Metal/CUDA ops), but the numbers you see
 here are the same phenomenon those kernels exploit.
 
-Run it:  python scripts/cpu_demo.py
+Run it:  python scripts/cpu_demo.py            (full walk-through)
+         python scripts/cpu_demo.py --brief    (the one table that matters;
+                                               what ./quickstart.sh shows)
 """
 
 from __future__ import annotations
 
 import argparse
+import pathlib
+import sys
 
 import numpy as np
+
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
+from niah.run_summary import record, under_quickstart  # noqa: E402
 
 HEAD_DIM = 128  # typical attention head dimension (must be a power of 2)
 
@@ -130,6 +137,10 @@ def retrieval_top1(queries, keys_deq, targets):
 # --------------------------------------------------------------------------
 # Demo sections
 # --------------------------------------------------------------------------
+# Qwen3-4B: 2 (K+V) x 36 layers x 8 KV heads x 128 dims x 2 bytes (FP16)
+PER_TOKEN_BYTES = 2 * 36 * 8 * 128 * 2
+
+
 def section_memory_math():
     print("=" * 72)
     print("1. WHY THE KV CACHE IS THE PROBLEM")
@@ -144,7 +155,7 @@ at FP16, that is:
     2 (K+V) x 36 layers x 8 heads x 128 dims x 2 bytes = 144 KiB PER TOKEN
 """
     )
-    per_tok = 2 * 36 * 8 * 128 * 2
+    per_tok = PER_TOKEN_BYTES
     print(f"    {'context':>10} | {'FP16 cache':>12} | {'~3.5x compressed':>16}")
     print(f"    {'-'*10} | {'-'*12} | {'-'*16}")
     for tokens in (4096, 16384, 65536, 131072):
@@ -162,10 +173,9 @@ measurement is available.
     )
 
 
-def section_quantizer(seed: int):
-    print("=" * 72)
-    print("2. THE QUANTIZER, ON ONE TENSOR")
-    print("=" * 72)
+def quantizer_results(seed: int) -> list[dict]:
+    """Quantize one synthetic Key tensor several ways; return one row of
+    metrics per scheme (name, rmse, cos, norm_err, retrieval, n_queries)."""
     rng = np.random.default_rng(seed)
 
     # Synthetic "Keys": mostly Gaussian, with a few outlier channels --
@@ -208,15 +218,27 @@ def section_quantizer(seed: int):
         "Values-style 4-bit min/max ('v4')": quant_minmax(keys, 4),
     }
 
+    return [
+        dict(name=name, rmse=rmse(keys, deq), cos=cos_sim(keys, deq),
+             norm_err=norm_error(keys, deq),
+             retrieval=retrieval_top1(queries, deq, targets),
+             n_queries=n_queries)
+        for name, deq in candidates.items()
+    ]
+
+
+def section_quantizer(rows: list[dict]):
+    print("=" * 72)
+    print("2. THE QUANTIZER, ON ONE TENSOR")
+    print("=" * 72)
     print(
         f"\n{'scheme':<35} {'RMSE':>7} {'cos sim':>8} {'norm err':>9} {'retrieval':>10}"
     )
     print(f"{'-'*35} {'-'*7} {'-'*8} {'-'*9} {'-'*10}")
-    for name, deq in candidates.items():
+    for r in rows:
         print(
-            f"{name:<35} {rmse(keys, deq):>7.4f} {cos_sim(keys, deq):>8.4f} "
-            f"{norm_error(keys, deq):>8.1%} "
-            f"{retrieval_top1(queries, deq, targets):>9.1%}"
+            f"{r['name']:<35} {r['rmse']:>7.4f} {r['cos']:>8.4f} "
+            f"{r['norm_err']:>8.1%} {r['retrieval']:>9.1%}"
         )
     print(
         """
@@ -253,23 +275,14 @@ Two different numbers, constantly conflated:
 Why is expansion smaller? Compression only shrinks the KV slice of memory.
 Weights don't shrink. Activation and attention workspace don't shrink --
 and some of that grows WITH context length, eating into the headroom the
-compression just created. Toy model (16 GB card, 8 GB weights):
-"""
-    )
-    total, weights = 16.0, 8.0
-    print(f"    {'overhead':>9} | {'KV pool':>8} | {'expansion at 3.5x cache ratio':>30}")
-    print(f"    {'-'*9} | {'-'*8} | {'-'*30}")
-    for overhead in (1.0, 2.0, 3.0):
-        pool = total - weights - overhead
-        # If overhead were constant, tokens scale exactly with the ratio.
-        # Real engines: overhead grows with context, so realized expansion
-        # falls short of the cache ratio. We show the ideal bound here.
-        print(
-            f"    {overhead:>7.1f}G | {pool:>6.1f}G | up to 3.5x in the pool; "
-            f"realized < 3.5x"
-        )
-    print(
-        """
+compression just created.
+
+Example: a 16 GB card holding 8 GB of weights and ~2 GB of other overhead
+leaves a ~6 GB pool for the KV cache. A 3.5x cache ratio lets that pool
+hold 3.5x more tokens -- but running a longer context also needs more
+workspace, which comes out of the same card, so the context you can
+actually run grows by LESS than 3.5x.
+
 Rule for the README of your life: quote the compression ratio as a cache
 property, quote context expansion only as a measured, hardware-specific
 result -- and never present one as the other. The bigger the model and the
@@ -279,15 +292,81 @@ get.
     )
 
 
+# Row names from quantizer_results() that the brief view shows, with the
+# beginner-facing label and an optional pointer. The '_nc' row stays in
+# even though it scores a hair lower on this toy test: it is the setting
+# Steps 2-3 actually run, and showing only the best row would be spin.
+BRIEF_ROWS = [
+    ("FP16 (no quantization)", "uncompressed (FP16)", ""),
+    ("3-bit naive (no rotation)", "3-bit, naive", "<- a few outlier values wreck it"),
+    ("3-bit + WHT rotation + MSE grid", "3-bit + rotation + better grid",
+     "<- the TurboQuant idea"),
+    ("  ... + norm correction ('_nc')", "... + norm correction ('_nc')",
+     "<- what Steps 2-3 use"),
+]
+
+
+def section_brief(rows: list[dict]):
+    by_name = {r["name"]: r for r in rows}
+    per_tok_kib = PER_TOKEN_BYTES / 1024
+    gib_131k = PER_TOKEN_BYTES * 131072 / 2**30
+    print(
+        f"""The KV cache is the model's working memory: every token it reads leaves
+a Key and a Value vector in every layer. For Qwen3-4B that costs
+{per_tok_kib:.0f} KiB per token at FP16 -- {gib_131k:.1f} GiB at 131,072 tokens.
+TurboQuant stores Keys in 3 bits and Values in 4, instead of 16 bits each.
+Does attention still find the right token afterwards?
+
+  Toy needle test on synthetic vectors (retrieval, higher is better):
+"""
+    )
+    for key, label, note in BRIEF_ROWS:
+        r = by_name[key]
+        print(f"    {label:<34} {r['retrieval']:>6.1%}   {note}".rstrip())
+    rot = by_name["3-bit + WHT rotation + MSE grid"]
+    nc = by_name["  ... + norm correction ('_nc')"]
+    gap = round(abs(rot["retrieval"] - nc["retrieval"]) * rot["n_queries"])
+    print(
+        f"""
+Rotation spreads those outliers across all 128 dimensions, so the same
+3 bits go much further. Norm correction puts each vector's length back
+(attention is sensitive to it); on this small toy test it differs from
+plain rotation by {gap} of {rot['n_queries']} queries.
+Full walk-through (memory table, error metrics, ratio vs. context):
+  python scripts/cpu_demo.py
+"""
+    )
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--seed", type=int, default=1234)
+    ap.add_argument("--brief", action="store_true",
+                    help="print only the retrieval table and the idea "
+                         "behind it (what ./quickstart.sh shows)")
     args = ap.parse_args()
+
+    rows = quantizer_results(args.seed)
+    by_name = {r["name"]: r for r in rows}
+    record("cpu", {
+        "fp16": by_name["FP16 (no quantization)"]["retrieval"],
+        "naive": by_name["3-bit naive (no rotation)"]["retrieval"],
+        "rotated": by_name["3-bit + WHT rotation + MSE grid"]["retrieval"],
+        "rotated_nc": by_name["  ... + norm correction ('_nc')"]["retrieval"],
+        "n_queries": rows[0]["n_queries"],
+        "seed": args.seed,
+    })
+
+    if args.brief:
+        section_brief(rows)
+        return
 
     print("\nTurboQuant-101 CPU demo -- no GPU, just the ideas.\n")
     section_memory_math()
-    section_quantizer(args.seed)
+    section_quantizer(rows)
     section_ratio_vs_expansion()
+    if under_quickstart():
+        return  # quickstart.sh prints its own next steps
     print(
         "Next step: run the real thing on a model.\n"
         "  NVIDIA GPU:     see docs/cuda.md   (vLLM, turboquant_k3v4_nc)\n"

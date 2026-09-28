@@ -24,7 +24,7 @@ actually engaged, and measure what the tradeoff costs on your hardware.
 
 ```bash
 git clone <this-repo> && cd turboquant-101
-./quickstart.sh
+./quickstart.sh            # add --verbose for the full detail at every step
 ```
 
 That's it. The script runs the CPU demo everywhere, then detects your

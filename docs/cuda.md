@@ -124,7 +124,13 @@ INFO/WARNING output by default (`VLLM_LOGGING_LEVEL=ERROR`; errors still
 show) and shut the engine down before printing results, so the answer is
 the last thing on screen. Add `--verbose` to see the full log -- including
 the engine's own evidence lines, "Using TURBOQUANT attention backend" and
-"GPU KV cache size". An exported `VLLM_LOGGING_LEVEL` always wins.
+"GPU KV cache size". Quiet mode also mutes three things that ignore
+vLLM's log level: the Hub's "set a HF_TOKEN" notice, FlashInfer's
+autotuner lines, and the checkpoint / CUDA-graph progress bars
+(`HF_HUB_VERBOSITY`, `TRANSFORMERS_VERBOSITY`, `FLASHINFER_LOGGING_LEVEL`,
+`TQDM_DISABLE`, `use_tqdm_on_load`). An exported `VLLM_LOGGING_LEVEL` (or any
+of those variables) always wins. `./quickstart.sh --verbose` passes
+`--verbose` to every step.
 
 **"Could not find nvcc" / FlashInfer JIT errors during engine warm-up.**
 vLLM's FlashInfer sampler JIT-compiles CUDA on first use, which needs a
