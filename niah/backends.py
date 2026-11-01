@@ -68,6 +68,23 @@ class VLLMBackend:
         # Must be set before vllm is imported; the engine's worker process
         # inherits it.
         os.environ.setdefault("VLLM_LOGGING_LEVEL", "INFO" if verbose else "ERROR")
+        # Three more sources that ignore VLLM_LOGGING_LEVEL (seen on the
+        # 2026-09-27 WSL2 rerun), all proof-free and all back with --verbose:
+        #   * the Hub's "unauthenticated requests ... set a HF_TOKEN" notice,
+        #     server-sent and printed once per process (parent + engine) by
+        #     huggingface_hub / transformers loggers;
+        #   * FlashInfer's autotuner start/end lines -- it has its own logger;
+        #   * progress bars: checkpoint shards (use_tqdm_on_load, below) and
+        #     CUDA-graph capture, whose tqdm call passes no `disable=`, so
+        #     only tqdm's TQDM_DISABLE environment default reaches it.
+        # All are inherited by the engine process spawned below; anything
+        # you export yourself wins.
+        if not verbose:
+            for var, val in (("HF_HUB_VERBOSITY", "error"),
+                             ("TRANSFORMERS_VERBOSITY", "error"),
+                             ("FLASHINFER_LOGGING_LEVEL", "error"),
+                             ("TQDM_DISABLE", "1")):
+                os.environ.setdefault(var, val)
         # vLLM >= 0.25 requires UVA (pinned host memory) in its GPU worker,
         # but disables pinned memory by default under WSL2; without this the
         # engine dies at startup with "RuntimeError: UVA is not available".
@@ -96,6 +113,8 @@ class VLLMBackend:
         )
         if cache_dtype and cache_dtype != "auto":
             kwargs["kv_cache_dtype"] = cache_dtype
+        if not verbose:
+            kwargs["use_tqdm_on_load"] = False  # "Loading safetensors ..." bars
         # Escape hatch for version-specific knobs (e.g. skip_layers) without
         # editing this file -- pass them as a JSON dict from the CLI.
         kwargs.update(extra_engine_kwargs or {})

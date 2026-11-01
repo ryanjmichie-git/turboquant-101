@@ -24,11 +24,14 @@ actually engaged, and measure what the tradeoff costs on your hardware.
 
 ```bash
 git clone <this-repo> && cd turboquant-101
-./quickstart.sh
+./setup.sh                 # once: installs + model download (~8 GB on NVIDIA)
+./quickstart.sh            # the checks; add --verbose for the full detail
 ```
 
-That's it. The script runs the CPU demo everywhere, then detects your
-platform: NVIDIA GPUs get the vLLM path with the real
+That's it. `setup.sh` does the slow part once, with visible progress and
+a disk-space check first; nothing is measured there. `quickstart.sh`
+(which runs setup for you if you skipped it) runs the CPU demo
+everywhere, then detects your platform: NVIDIA GPUs get the vLLM path with the real
 `turboquant_k3v4_nc` cache (docs/cuda.md), Apple Silicon gets the
 llama.cpp quantized-KV path (same concept, but not the TurboQuant
 algorithm -- docs/apple-silicon.md has the honest story).
@@ -41,7 +44,7 @@ algorithm -- docs/apple-silicon.md has the honest story).
 | A total-beginner walkthrough | [GETTING_STARTED.md](GETTING_STARTED.md) |
 | Reproduce the validated NVIDIA experiment | `./quickstart.sh`, then [docs/cuda.md](docs/cuda.md) |
 | The safest cache reduction on NVIDIA | `fp8` — see the ladder in [docs/cuda.md](docs/cuda.md) |
-| The practical TurboQuant preset | `turboquant_4bit_nc` (~3.8x, +2.7% PPL) |
+| The practical TurboQuant preset | `turboquant_4bit_nc` (2.91x measured, +2.7% PPL) |
 | The maximum-capacity experiment | `turboquant_k3v4_nc` (3.16x measured, +10.6% PPL — eyes open) |
 | To learn the concept on a Mac | [docs/apple-silicon.md](docs/apple-silicon.md), Path A (mainline llama.cpp) |
 | Actual TurboQuant on a Mac | [docs/apple-silicon.md](docs/apple-silicon.md), Path B (community fork) |
@@ -101,7 +104,7 @@ Honesty section, because this field has a hype problem:
 * **Perfect NIAH is not "no quality loss."** Single-needle retrieval at
   8-16K is an easy task. vLLM's own benchmarks show `k3v4_nc` costs
   ~+10% perplexity and measurably hurts reasoning and very-long-context
-  tasks. If quality is the priority, `turboquant_4bit_nc` (~3.8x,
+  tasks. If quality is the priority, `turboquant_4bit_nc` (2.91x measured,
   +2.7% PPL) is the smarter preset. Details in LEARN.md; the day-to-day
   ladder (FP8 first) is in docs/cuda.md.
 * **No open-source implementation is the full paper.** Community
@@ -117,12 +120,14 @@ Honesty section, because this field has a hype problem:
 ## Map
 
 ```
-quickstart.sh          platform-detecting entry point
+setup.sh               one-time installs + model download (run first)
+quickstart.sh          platform-detecting entry point: the three checks
 GETTING_STARTED.md     the walkthrough for total beginners
 scripts/cpu_demo.py    the quantizer math, no GPU (start here)
 scripts/verify.py      proves compression is actually engaged  <- run this
 scripts/demo.py        5-needle retrieval quick win
 scripts/benchmark.py   full A/B protocol + report table
+scripts/download_model.py  the model download setup.sh runs
 niah/                  the benchmark protocol + backend adapters
 docs/cuda.md           NVIDIA/WSL2 setup and gotchas
 docs/apple-silicon.md  Mac setup (and the honest llama.cpp story)

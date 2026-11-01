@@ -9,6 +9,9 @@ that folder. Result on a fresh WSL2 install (2026-09-27): a WARNING
 traceback at engine startup, and an ImportError during engine shutdown
 that also skips cleanup (hence NCCL's "destroy_process_group() was not
 called"). Adding the folder to LD_LIBRARY_PATH fixed both, measured.
+(deep_gemm then fails a later, unrelated check -- no CUDA toolkit, so
+`assert cuda_home is not None` -- still a harmless WARNING, visible only
+with --verbose; see docs/cuda.md.)
 
 The loader reads LD_LIBRARY_PATH only when a process starts, so this must
 run before vLLM spawns its engine process (backends) or before verify.py

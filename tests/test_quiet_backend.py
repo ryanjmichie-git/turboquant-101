@@ -30,13 +30,18 @@ class _FakeLLM:
         return types.SimpleNamespace(encode=lambda text: text.split())
 
 
+QUIET_VARS = ("HF_HUB_VERBOSITY", "TRANSFORMERS_VERBOSITY",
+              "FLASHINFER_LOGGING_LEVEL", "TQDM_DISABLE")
+
+
 @pytest.fixture
 def fake_vllm(monkeypatch):
     mod = types.ModuleType("vllm")
     mod.LLM = _FakeLLM
     mod.SamplingParams = lambda **kw: kw
     monkeypatch.setitem(sys.modules, "vllm", mod)
-    monkeypatch.delenv("VLLM_LOGGING_LEVEL", raising=False)
+    for var in ("VLLM_LOGGING_LEVEL", *QUIET_VARS):
+        monkeypatch.delenv(var, raising=False)
     return mod
 
 
@@ -80,3 +85,27 @@ def test_close_swallows_teardown_errors(fake_vllm):
 
 def test_llamacpp_backend_has_close():
     backends.LlamaServerBackend().close()
+
+
+def test_quiet_mode_silences_non_vllm_noise(fake_vllm):
+    """HF_TOKEN notice, FlashInfer autotuner lines and progress bars ignore
+    VLLM_LOGGING_LEVEL; quiet mode must reach them too."""
+    import os
+    backends.VLLMBackend()
+    assert os.environ["HF_HUB_VERBOSITY"] == "error"
+    assert os.environ["FLASHINFER_LOGGING_LEVEL"] == "error"
+    assert os.environ["TQDM_DISABLE"] == "1"
+    assert _FakeLLM.last.kwargs["use_tqdm_on_load"] is False
+
+
+def test_verbose_leaves_other_noise_alone(fake_vllm):
+    import os
+    backends.VLLMBackend(verbose=True)
+    for var in QUIET_VARS:
+        assert var not in os.environ
+    assert "use_tqdm_on_load" not in _FakeLLM.last.kwargs
+
+
+def test_user_can_override_tqdm_flag(fake_vllm):
+    backends.VLLMBackend(extra_engine_kwargs={"use_tqdm_on_load": True})
+    assert _FakeLLM.last.kwargs["use_tqdm_on_load"] is True

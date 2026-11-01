@@ -21,8 +21,8 @@ knob also accepts vLLM's older built-in `fp8` cache:
 |---|---|---|---|
 | `fp8` (not TurboQuant) | FP8 K / FP8 V | 2.00x (measured) | negligible (per vLLM) |
 | `turboquant_k8v4` | FP8 K / 4-bit V | ~2.6x | +1.2% |
-| `turboquant_4bit_nc` | 4-bit K / 4-bit V + NC | ~3.8x | +2.7% |
-| `turboquant_k3v4_nc` | 3-bit K / 4-bit V + NC | ~3.5x | +10.6% |
+| `turboquant_4bit_nc` | 4-bit K / 4-bit V + NC | ~3.8x (2.91x measured) | +2.7% |
+| `turboquant_k3v4_nc` | 3-bit K / 4-bit V + NC | ~3.5x (3.16x measured) | +10.6% |
 | `turboquant_3bit_nc` | 3-bit K / 3-bit V + NC | ~4.9x | +20.6% |
 
 *TurboQuant rows are from vLLM's own documentation. Yes, `k3v4_nc` — this
@@ -49,8 +49,8 @@ and stop at the first rung that fits in your memory budget:
    (LEARN.md §6).
 2. **`fp8`** -- the safe default: 2x cache for effectively free, per
    vLLM's own guidance.
-3. **`turboquant_4bit_nc`** -- the practical TurboQuant config: ~3.8x
-   for +2.7% PPL.
+3. **`turboquant_4bit_nc`** -- the practical TurboQuant config: 2.91x
+   measured (~3.8x per compressed layer) for +2.7% PPL.
 4. **`turboquant_k3v4_nc`** -- this repo's reference config,
    *deliberately*: it is the maximum-capacity experiment, picked because
    it makes the memory win big enough to measure convincingly. Reproduce
@@ -101,8 +101,9 @@ of which escape vLLM's ImportError guard). It is loaded lazily, so a bare
 `import vllm` can succeed and the crash only appears when the engine
 starts -- in `verify.py` this shows up as a `[????]` "probe crashed"
 banner whose log ends in the torchcodec traceback. This repo is
-text-only: `pip uninstall -y torchcodec` and re-run. quickstart.sh now
-tests `import torchcodec` directly and removes it automatically.
+text-only: `pip uninstall -y torchcodec` and re-run. setup.sh (which
+quickstart.sh runs first) tests `import torchcodec` directly and removes
+it automatically.
 
 **"ImportError: libnvrtc.so.13: cannot open shared object file".** The
 file IS installed -- pip puts it in `.venv/.../site-packages/nvidia/cu13/lib`
@@ -119,12 +120,31 @@ export LD_LIBRARY_PATH="$(python -c 'import sysconfig; print(sysconfig.get_paths
 python -c "import vllm.cumem_allocator; print('cumem OK')"   # check
 ```
 
+With the fix, the shutdown traceback and the NCCL warning are gone
+(confirmed on the 2026-09-28 WSL2 run). `deep_gemm` now gets past
+libnvrtc but stops at a second, unrelated check at startup -- next entry.
+
+**`--verbose` shows a `deep_gemm` WARNING traceback ending in
+`assert cuda_home is not None`.** Harmless. vLLM's bundled DeepGEMM (FP8
+matrix kernels) looks for a full CUDA toolkit (`CUDA_HOME`, `nvcc`, or
+`/usr/local/cuda`) when it is imported. A fresh WSL2 install has none, so
+vLLM logs the failed import as a WARNING and carries on; Qwen3-4B runs in
+BF16 and never calls those kernels. Default (quiet) output hides it
+because it only shows errors. Don't install a CUDA toolkit just to
+silence it.
+
 **Where did the engine log go?** `demo.py` and `benchmark.py` hide vLLM's
 INFO/WARNING output by default (`VLLM_LOGGING_LEVEL=ERROR`; errors still
 show) and shut the engine down before printing results, so the answer is
 the last thing on screen. Add `--verbose` to see the full log -- including
 the engine's own evidence lines, "Using TURBOQUANT attention backend" and
-"GPU KV cache size". An exported `VLLM_LOGGING_LEVEL` always wins.
+"GPU KV cache size". Quiet mode also mutes three things that ignore
+vLLM's log level: the Hub's "set a HF_TOKEN" notice, FlashInfer's
+autotuner lines, and the checkpoint / CUDA-graph progress bars
+(`HF_HUB_VERBOSITY`, `TRANSFORMERS_VERBOSITY`, `FLASHINFER_LOGGING_LEVEL`,
+`TQDM_DISABLE`, `use_tqdm_on_load`). An exported `VLLM_LOGGING_LEVEL` (or any
+of those variables) always wins. `./quickstart.sh --verbose` passes
+`--verbose` to every step.
 
 **"Could not find nvcc" / FlashInfer JIT errors during engine warm-up.**
 vLLM's FlashInfer sampler JIT-compiles CUDA on first use, which needs a

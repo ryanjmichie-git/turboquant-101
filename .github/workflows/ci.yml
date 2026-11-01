@@ -28,13 +28,14 @@ jobs:
         run: ruff check .
 
       - name: Shell syntax
-        run: bash -n quickstart.sh
+        run: bash -n quickstart.sh && bash -n setup.sh
 
       - name: Regression tests
         run: pytest -q
 
       # End-to-end CPU path exactly as a fresh user runs it. Runners have
-      # no GPU, so this exercises venv creation, the Python gate, base
-      # deps, and the full CPU demo, then exits at platform detection.
+      # no GPU, so this exercises setup.sh (venv creation, the Python gate,
+      # base deps) via quickstart's --brief call, then the CPU demo and the
+      # summary, and stops at platform detection.
       - name: quickstart.sh (CPU path)
         run: ./quickstart.sh

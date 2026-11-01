@@ -47,10 +47,10 @@ def test_verify_vllm_reports_crash_not_log_format(monkeypatch, capsys):
     assert "logs differently" not in out
 
 
-def test_quickstart_tests_torchcodec_itself():
+def test_setup_tests_torchcodec_itself():
     """`import vllm` alone passes while torchcodec is broken (lazy import),
     so the guard must import torchcodec directly and then the engine path."""
-    text = (ROOT / "quickstart.sh").read_text(encoding="utf-8")
+    text = (ROOT / "setup.sh").read_text(encoding="utf-8")
     assert "python -c 'import torchcodec'" in text
     assert "from vllm import SamplingParams" in text
     assert "if ! python -c 'import vllm'" not in text
@@ -67,11 +67,12 @@ def _pass_run(monkeypatch, capsys, util):
 
 def test_default_util_explains_readme_mismatch(monkeypatch, capsys):
     out = _pass_run(monkeypatch, capsys, 0.85)
-    assert "measured at 85% GPU memory" in out
+    assert "same GPU memory budget (85%)" in out
     assert "44,336 -> 140,320" in out and "90%" in out
+    assert "compare ratios" in out
 
 
 def test_reference_util_has_no_mismatch_note(monkeypatch, capsys):
     out = _pass_run(monkeypatch, capsys, 0.90)
-    assert "measured at 90% GPU memory" in out
+    assert "same GPU memory budget (90%)" in out
     assert "44,336" not in out

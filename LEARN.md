@@ -120,7 +120,7 @@ lean on machinery you are not running.
 own benchmark blog reports `k3v4_nc` at roughly **+10.6% perplexity**,
 with meaningful degradation on reasoning and very-long-context tasks --
 they flag it as a poor production choice, recommending `4bit_nc` (+2.7%
-PPL at 3.8x) when quality matters. Both things are true at once:
+PPL; 2.91x measured here, ~3.8x per compressed layer) when quality matters. Both things are true at once:
 single-needle retrieval at 8-16K is simply too easy to detect that
 damage. Multi-needle, aggregation tasks, and 64K+ contexts are where
 cracks show. A clean NIAH score means "no damage detectable by this

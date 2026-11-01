@@ -20,6 +20,9 @@ Usage:
       (spawns llama-server twice: f16 KV, then your chosen cache types,
        and reads the KV buffer sizes it reports at startup)
 
+Add --verbose to see which log pattern or engine attribute each capacity
+number was read from.
+
 Exit code 0 = PASS, 1 = FAIL, 2 = couldn't measure (see output).
 """
 
@@ -37,6 +40,9 @@ import sys
 import threading
 import time
 
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from niah.run_summary import record  # noqa: E402
+
 DEFAULT_MODEL = "Qwen/Qwen3-4B"
 HF_GGUF = "Qwen/Qwen3-4B-GGUF:Q4_K_M"  # llama-server auto-downloads via -hf
 
@@ -45,13 +51,16 @@ HF_GGUF = "Qwen/Qwen3-4B-GGUF:Q4_K_M"  # llama-server auto-downloads via -hf
 # 0.85 for headroom on busy desktops; only absolute counts differ.
 REFERENCE_GPU_MEM_UTIL = 0.90
 PASS_RATIO = 2.0  # compressed capacity must be at least this x baseline
-EXPECT_HINT = "~3-4.5x is typical for k3v4-style settings"
+EXPECT_HINT = "typical for this setting: ~3-4.5x"
 
 
 def banner(ok: bool | None, msg: str):
+    """Boxed verdict. A '\n' in msg starts an indented continuation line, so
+    long verdicts wrap where we choose instead of where the terminal does."""
     tag = {True: "PASS", False: "FAIL", None: "????"}[ok]
     line = "=" * 72
-    print(f"\n{line}\n  [{tag}]  {msg}\n{line}\n")
+    body = ("\n" + " " * 10).join(msg.split("\n"))
+    print(f"\n{line}\n  [{tag}]  {body}\n{line}")
 
 
 # ==========================================================================
@@ -122,6 +131,70 @@ def _vllm_probe(cache_dtype: str | None, max_model_len: int, gpu_mem_util: float
     print("PROBE_RESULT " + json.dumps(result), flush=True)
 
 
+def _parse_capacity(log: str) -> tuple[int | None, str | None, str | None]:
+    """KV capacity (tokens) from one probe's output.
+
+    Returns (tokens, kind, detail). kind is the VLLM_LOG_PATTERNS unit
+    ("tokens", "concurrency", "blocks"), "attr" for the engine-attribute
+    fallback, or None. detail names the exact regex or attribute chain --
+    printed only with --verbose, since it's for maintainers."""
+    # The engine's own startup log is authoritative: "GPU KV cache size"
+    # accounts for the actual per-layer cache layout. The attribute chains
+    # are only a fallback -- num_gpu_blocks x block_size UNDER-REPORTS
+    # capacity by 2x for turboquant dtypes (packed slots store more tokens
+    # per block than cache_config.block_size implies; measured on 0.25.0).
+    for pat, unit in VLLM_LOG_PATTERNS:
+        hit = pat.search(log)
+        if hit:
+            val = int(hit.group(1).replace(",", ""))
+            if unit == "blocks":
+                tokens = val * 16
+            elif unit == "concurrency":
+                tokens = int(val * float(hit.group(2)))
+            else:
+                tokens = val
+            return tokens, unit, f"log pattern: {pat.pattern!r}"
+    m = re.search(r"PROBE_RESULT (\{.*\})", log)
+    if m:
+        data = json.loads(m.group(1))
+        tokens = data.get("attr_tokens")
+        if tokens is not None:
+            return tokens, "attr", f"attr chain: {data.get('attr_chain')}"
+    return None, None, None
+
+
+# The engine's own words, quoted verbatim under --verbose: its capacity
+# line and which attention backend(s) it chose. The compressed engine
+# names TURBOQUANT (and FLASH_ATTN too -- vLLM keeps the first and last
+# two layers uncompressed as a quality guard).
+BACKEND_LINE = re.compile(r"Using \w+ attention backend")
+
+
+def engine_evidence(log: str) -> list[str]:
+    """Distinct evidence phrases from one probe log, in log order."""
+    found = []
+    for pat, _ in VLLM_LOG_PATTERNS:
+        hit = pat.search(log)
+        if hit:
+            found.append(hit.group(0).strip())
+            break
+    found += [m.group(0) for m in BACKEND_LINE.finditer(log)]
+    return list(dict.fromkeys(found))
+
+
+# Plain-English name for where a capacity number came from.
+SOURCE_TEXT = {
+    "tokens": 'vLLM\'s own "GPU KV cache size" startup line',
+    "concurrency": 'vLLM\'s "Maximum concurrency" startup line '
+                   "(max length x concurrency)",
+    "blocks": 'vLLM\'s "# GPU blocks" startup line (blocks x 16)',
+}
+ATTR_WARNING = ("  NOTE: at least one number came from engine attributes, not the "
+                "startup log.\n  That method can UNDER-report turboquant "
+                "capacity (see the comment above\n  VLLM_LOG_PATTERNS in "
+                "scripts/verify.py), so the true ratio may be higher.")
+
+
 def _run_vllm_probe(cache_dtype, max_model_len, gpu_mem_util,
                     hf_overrides=None) -> tuple[int | None, str]:
     cmd = [
@@ -165,34 +238,7 @@ def _run_vllm_probe(cache_dtype, max_model_len, gpu_mem_util,
         with open(os.path.join(dump_dir, f"probe-{tag}.log"), "w") as f:
             f.write(log)
 
-    # The engine's own startup log is authoritative: "GPU KV cache size"
-    # accounts for the actual per-layer cache layout. The attribute chains
-    # are only a fallback -- num_gpu_blocks x block_size UNDER-REPORTS
-    # capacity by 2x for turboquant dtypes (packed slots store more tokens
-    # per block than cache_config.block_size implies; measured on 0.25.0).
-    tokens, source = None, None
-    for pat, unit in VLLM_LOG_PATTERNS:
-        hit = pat.search(log)
-        if hit:
-            val = int(hit.group(1).replace(",", ""))
-            if unit == "blocks":
-                tokens = val * 16
-            elif unit == "concurrency":
-                tokens = int(val * float(hit.group(2)))
-            else:
-                tokens = val
-            source = f"log pattern: {pat.pattern!r}"
-            break
-    if tokens is None:  # fall back to engine attributes
-        m = re.search(r"PROBE_RESULT (\{.*\})", log)
-        if m:
-            data = json.loads(m.group(1))
-            tokens = data.get("attr_tokens")
-            if tokens is not None:
-                source = f"attr chain: {data.get('attr_chain')} (NOTE: may " \
-                         f"under-report turboquant capacity; see comment above)"
-    if source:
-        print(f"  (capacity via {source})")
+    tokens, _, _ = _parse_capacity(log)
     return tokens, log
 
 
@@ -234,13 +280,23 @@ def diagnose_probe_crash(log: str) -> str | None:
 
 def verify_vllm(args) -> int:
     dtype = args.cache_dtype or "turboquant_k3v4_nc"
-    print(f"Probing baseline engine (auto dtype), then {dtype} ...")
-    print("(each probe loads the model; expect a few minutes total)\n")
+    verbose = getattr(args, "verbose", False)
+    print(f"Loading the model twice -- normal cache, then {dtype} -- and")
+    print("reading how many tokens of KV cache vLLM says fit each time.")
+    print("(Each load takes under a minute once ./setup.sh has downloaded the "
+          "model.)\n")
 
+    # The probe's output is captured, so nothing can land mid-line here.
+    print("  loading with the normal cache ...", end="", flush=True)
+    t0 = time.perf_counter()
     base_tokens, base_log = _run_vllm_probe(
         None, args.max_model_len, args.gpu_mem_util, args.hf_overrides)
+    print(f" done ({time.perf_counter() - t0:.0f} s)")
+    print(f"  loading with {dtype} ...", end="", flush=True)
+    t0 = time.perf_counter()
     comp_tokens, comp_log = _run_vllm_probe(
         dtype, args.max_model_len, args.gpu_mem_util, args.hf_overrides)
+    print(f" done ({time.perf_counter() - t0:.0f} s)\n")
 
     # Sanity check: did the engine actually accept the dtype?
     if re.search(r"(?i)(invalid|unsupported).{0,40}kv[_ ]cache", comp_log):
@@ -269,23 +325,57 @@ def verify_vllm(args) -> int:
         return 2
 
     ratio = comp_tokens / max(base_tokens, 1)
-    print(f"  baseline KV capacity:   {base_tokens:>10,} tokens")
-    print(f"  compressed KV capacity: {comp_tokens:>10,} tokens")
-    print(f"  ratio:                  {ratio:>10.2f}x   ({EXPECT_HINT})")
+    comp_label = f"compressed ({dtype})"
+    width = max(len("normal cache (baseline)"), len(comp_label))
+    print(f"  Tokens of KV cache that fit in the same GPU memory budget "
+          f"({args.gpu_mem_util:.0%}):")
+    print(f"    {'normal cache (baseline)':<{width}}  {base_tokens:>9,}")
+    print(f"    {comp_label:<{width}}  {comp_tokens:>9,}   -> {ratio:.2f}x more")
+    if dtype.startswith("turboquant_k3v4"):
+        print(f"    ({EXPECT_HINT})")
+
+    # Where the numbers came from -- in words by default; the exact regex
+    # or attribute chain with --verbose. The attribute-fallback caveat is
+    # always shown: it changes how far the number can be trusted.
+    parsed = [_parse_capacity(base_log), _parse_capacity(comp_log)]
+    kinds = [k for _, k, _ in parsed]
+    known = [SOURCE_TEXT[k] for k in kinds if k in SOURCE_TEXT]
+    if known and len(set(known)) == 1 and len(known) == 2:
+        print(f"  Source: {known[0]}, one per engine.")
+    elif known:
+        print(f"  Source: {'; '.join(dict.fromkeys(known))}.")
+    if "attr" in kinds:
+        print(ATTR_WARNING)
     # Token counts scale with the memory budget; the ratio doesn't. Say so,
     # or readers compare these counts with the README's (measured at 0.9,
-    # like demo.py/benchmark.py) and think something is wrong.
-    util_note = f"  (measured at {args.gpu_mem_util:.0%} GPU memory"
+    # like demo.py/benchmark.py) and think something is wrong. The budget
+    # itself is already in the table header above.
     if abs(args.gpu_mem_util - REFERENCE_GPU_MEM_UTIL) > 1e-9:
-        util_note += (f"; the README's 44,336 -> 140,320 were measured at "
-                      f"{REFERENCE_GPU_MEM_UTIL:.0%}. Token counts scale with "
-                      f"the budget -- the ratio is what matters")
-    print(util_note + ")")
+        print(f"  (The README's 44,336 -> 140,320 used "
+              f"{REFERENCE_GPU_MEM_UTIL:.0%} -- compare ratios, not counts.)")
+    if verbose:
+        for label, (_, _, detail) in zip(("baseline", "compressed"), parsed):
+            if detail:
+                print(f"  ({label} capacity via {detail})")
+        print("  What each engine logged (verbatim):")
+        for label, log in (("baseline", base_log), ("compressed", comp_log)):
+            lines = engine_evidence(log) or ["(no evidence lines found)"]
+            for i, phrase in enumerate(lines):
+                head = f"{label}:" if i == 0 else ""
+                quoted = phrase if phrase.startswith("(") else f'"{phrase}"'
+                print(f"    {head:<12}{quoted}")
 
-    if ratio >= PASS_RATIO:
-        banner(True, f"Compression is ACTIVE ({ratio:.2f}x more KV capacity). "
-                     f"This proves it is ON -- not that quality held; the "
-                     f"needle demo and benchmark test that.")
+    passed = ratio >= PASS_RATIO
+    record("verify", {
+        "backend": "vllm", "cache_dtype": dtype,
+        "base_tokens": base_tokens, "comp_tokens": comp_tokens,
+        "ratio": ratio, "gpu_mem_util": args.gpu_mem_util,
+        "passed": passed, "attr_fallback": "attr" in kinds,
+    })
+    if passed:
+        banner(True, f"Compression is ON: {ratio:.2f}x more KV cache fits in "
+                     f"the same memory.\nNot proof quality held -- the needle demo "
+                     f"and benchmark test that.")
         return 0
     banner(False, f"Ratio {ratio:.2f}x is below {PASS_RATIO}x -- compression did "
                   f"NOT meaningfully engage. Do NOT trust any benchmark run in "
@@ -419,12 +509,19 @@ def verify_llamacpp(args) -> int:
         return 2
 
     ratio = base_mib / max(comp_mib, 0.001)
+    record("verify", {
+        "backend": "llamacpp", "cache_dtype": f"{args.ctk}/{args.ctv}",
+        "base_mib": base_mib, "comp_mib": comp_mib, "ratio": ratio,
+        "passed": ratio >= 1.5,
+    })
     print(f"  f16 KV size:        {base_mib:>10.1f} MiB")
     print(f"  compressed KV size: {comp_mib:>10.1f} MiB")
     print(f"  ratio:              {ratio:>10.2f}x smaller")
 
     if ratio >= PASS_RATIO:
-        banner(True, f"Compression is ACTIVE (KV cache {ratio:.2f}x smaller).")
+        banner(True, f"Compression is ON: KV cache {ratio:.2f}x smaller.\n"
+                     f"Not proof quality held -- the needle demo and benchmark "
+                     f"test that.")
         return 0
     if ratio >= 1.5:
         banner(True, f"Compression is active but modest ({ratio:.2f}x). q8_0 KV "
@@ -450,6 +547,9 @@ def main():
                     help="JSON dict of HF config overrides for the probe "
                          "engines (e.g. a rope_scaling block to test context "
                          "lengths beyond the model's native maximum)")
+    ap.add_argument("--verbose", action="store_true",
+                    help="also show which log pattern / engine attribute each "
+                         "capacity number was read from")
     ap.add_argument("--_vllm-probe", default=None, help=argparse.SUPPRESS)
     # llama.cpp options
     ap.add_argument("--server-bin", default="llama-server")
