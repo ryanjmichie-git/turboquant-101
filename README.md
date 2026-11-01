@@ -44,7 +44,7 @@ algorithm -- docs/apple-silicon.md has the honest story).
 | A total-beginner walkthrough | [GETTING_STARTED.md](GETTING_STARTED.md) |
 | Reproduce the validated NVIDIA experiment | `./quickstart.sh`, then [docs/cuda.md](docs/cuda.md) |
 | The safest cache reduction on NVIDIA | `fp8` — see the ladder in [docs/cuda.md](docs/cuda.md) |
-| The practical TurboQuant preset | `turboquant_4bit_nc` (~3.8x, +2.7% PPL) |
+| The practical TurboQuant preset | `turboquant_4bit_nc` (2.91x measured, +2.7% PPL) |
 | The maximum-capacity experiment | `turboquant_k3v4_nc` (3.16x measured, +10.6% PPL — eyes open) |
 | To learn the concept on a Mac | [docs/apple-silicon.md](docs/apple-silicon.md), Path A (mainline llama.cpp) |
 | Actual TurboQuant on a Mac | [docs/apple-silicon.md](docs/apple-silicon.md), Path B (community fork) |
@@ -104,7 +104,7 @@ Honesty section, because this field has a hype problem:
 * **Perfect NIAH is not "no quality loss."** Single-needle retrieval at
   8-16K is an easy task. vLLM's own benchmarks show `k3v4_nc` costs
   ~+10% perplexity and measurably hurts reasoning and very-long-context
-  tasks. If quality is the priority, `turboquant_4bit_nc` (~3.8x,
+  tasks. If quality is the priority, `turboquant_4bit_nc` (2.91x measured,
   +2.7% PPL) is the smarter preset. Details in LEARN.md; the day-to-day
   ladder (FP8 first) is in docs/cuda.md.
 * **No open-source implementation is the full paper.** Community

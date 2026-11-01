@@ -21,8 +21,8 @@ knob also accepts vLLM's older built-in `fp8` cache:
 |---|---|---|---|
 | `fp8` (not TurboQuant) | FP8 K / FP8 V | 2.00x (measured) | negligible (per vLLM) |
 | `turboquant_k8v4` | FP8 K / 4-bit V | ~2.6x | +1.2% |
-| `turboquant_4bit_nc` | 4-bit K / 4-bit V + NC | ~3.8x | +2.7% |
-| `turboquant_k3v4_nc` | 3-bit K / 4-bit V + NC | ~3.5x | +10.6% |
+| `turboquant_4bit_nc` | 4-bit K / 4-bit V + NC | ~3.8x (2.91x measured) | +2.7% |
+| `turboquant_k3v4_nc` | 3-bit K / 4-bit V + NC | ~3.5x (3.16x measured) | +10.6% |
 | `turboquant_3bit_nc` | 3-bit K / 3-bit V + NC | ~4.9x | +20.6% |
 
 *TurboQuant rows are from vLLM's own documentation. Yes, `k3v4_nc` — this
@@ -49,8 +49,8 @@ and stop at the first rung that fits in your memory budget:
    (LEARN.md §6).
 2. **`fp8`** -- the safe default: 2x cache for effectively free, per
    vLLM's own guidance.
-3. **`turboquant_4bit_nc`** -- the practical TurboQuant config: ~3.8x
-   for +2.7% PPL.
+3. **`turboquant_4bit_nc`** -- the practical TurboQuant config: 2.91x
+   measured (~3.8x per compressed layer) for +2.7% PPL.
 4. **`turboquant_k3v4_nc`** -- this repo's reference config,
    *deliberately*: it is the maximum-capacity experiment, picked because
    it makes the memory win big enough to measure convincingly. Reproduce
