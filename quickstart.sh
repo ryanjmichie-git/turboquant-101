@@ -49,6 +49,7 @@ rm -rf "$TQ101_RUN_DIR"
 mkdir -p "$TQ101_RUN_DIR"
 
 summary() {
+  say "Checks complete"
   python scripts/summary.py "$TQ101_RUN_DIR" \
     --elapsed "$(( $(date +%s) - START_TIME ))"
 }

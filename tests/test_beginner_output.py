@@ -297,6 +297,14 @@ def test_quickstart_delegates_setup_and_prints_one_ready_line():
     assert 'say "Setup ready: $PLATFORM"' in setup
 
 
+def test_quickstart_prints_checks_complete_above_summary():
+    """Paper review (2026-10-24): "Setup ready" opens the run, "Checks
+    complete" closes it, right above the summary."""
+    text = (ROOT / "quickstart.sh").read_text(encoding="utf-8")
+    body = text.split("summary() {", 1)[1].split("\n}", 1)[0]
+    assert body.index('say "Checks complete"') < body.index("scripts/summary.py")
+
+
 def test_cpu_brief_has_no_trailing_blank_line(tmp_path):
     out = _cpu_demo("--brief", run_dir=tmp_path)
     assert out.endswith("python scripts/cpu_demo.py\n")
