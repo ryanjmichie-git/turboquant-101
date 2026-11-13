@@ -101,7 +101,7 @@ h1:focus{ outline:none; }
 .rule-body{ padding:10px 16px 16px; font-size:18px; }
 .rule-body p + p{ margin-top:8px; }
 .rule-art{ display:block; margin:0 auto 8px; }
-.rule-try{ margin-top:12px; padding-top:12px; border-top:2px solid var(--ink); font-size:15px; }
+.rule-body:empty{ display:none; }
 
 /* the table (steps 2 and 3) */
 .tb{ position:relative; max-width:964px; margin-top:16px; padding:10px 16px 16px; background:var(--tile); color:var(--ink); border-radius:6px; box-shadow:5px 7px 0 var(--tile-edge), 8px 12px 0 var(--bg-deep), inset 1px 1px 0 var(--tile-hi); }
@@ -160,10 +160,10 @@ h1:focus{ outline:none; }
 .evt-name{ padding:8px 9px 0; font-size:18px; font-weight:700; line-height:1.2; }
 .evt-add{ margin-top:auto; padding:6px 9px 8px; font-size:15px; font-weight:700; color:var(--edge-dk); }
 .meter{ margin-top:18px; font-weight:700; font-size:18px; }
-.full, .endcard, .soon{ max-width:964px; margin-top:24px; padding:16px 20px 18px; background:var(--tile); color:var(--ink); border-radius:6px; box-shadow:5px 7px 0 var(--tile-edge), 8px 12px 0 var(--bg-deep); }
+.full, .endcard{ max-width:964px; margin-top:24px; padding:16px 20px 18px; background:var(--tile); color:var(--ink); border-radius:6px; box-shadow:5px 7px 0 var(--tile-edge), 8px 12px 0 var(--bg-deep); }
 .full{ border-top:8px solid var(--red); }
 .endcard{ border-top:8px solid var(--blue); }
-.full p + p, .endcard p + p, .soon p + p{ margin-top:8px; }
+.full p + p, .endcard p + p{ margin-top:8px; }
 .big{ font-weight:700; font-size:24px; }
 .row{ display:flex; gap:14px; flex-wrap:wrap; margin-top:14px; }
 .endcard .btn.next{ background:var(--blue); color:var(--cream); box-shadow:3px 4px 0 #1C3F5E, 5px 7px 0 var(--bg-deep); }
@@ -205,9 +205,12 @@ h1, .brand, .big, .q, .rule-top, .tb h2, .bigtxt{ line-height:1.2; }
 
 /* what you will learn, what you will do */
 .ld{ display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:14px; margin-top:10px; max-width:964px; }
-.ld-block{ display:flex; gap:12px; align-items:center; padding:10px 14px; border-radius:5px; background:var(--tile); color:var(--ink); box-shadow:2px 3px 0 var(--tile-edge), 4px 6px 0 var(--bg-deep); }
-.ld-block svg{ flex:0 0 40px; }
-.ld-label{ font-size:18px; font-weight:700; }
+.ld-block{ border-radius:5px; background:var(--tile); color:var(--ink); box-shadow:2px 3px 0 var(--tile-edge), 4px 6px 0 var(--bg-deep); }
+.ld-label{ display:flex; align-items:center; gap:10px; padding:7px 16px 9px; border-radius:5px 5px 0 0; background:var(--wood-lt); box-shadow:inset 0 -2px 0 var(--wood-dk); font-size:20px; font-weight:700; }
+.ld-label svg{ flex:0 0 30px; width:30px; height:30px; }
+.ld-body{ padding:10px 16px 14px; }
+.c-red{ color:var(--red); font-weight:700; }
+.c-blue{ color:var(--blue); font-weight:700; }
 .ld-note{ margin-top:6px; font-size:15px; }
 .slot{ min-height:160px; }
 
@@ -224,6 +227,128 @@ h1, .brand, .big, .q, .rule-top, .tb h2, .bigtxt{ line-height:1.2; }
 .rack-back{ display:none; font-size:15px; font-weight:700; text-align:center; color:var(--ink); }
 .dragging .rack-back{ display:block; }
 .drag-ghost{ position:fixed; left:0; top:0; margin:0; z-index:30; pointer-events:none; transition:none !important; box-shadow:6px 10px 0 rgba(30,26,22,.35); }
+
+/* Ch 2: the race and the limit */
+.racecap{ max-width:964px; min-height:2.4em; margin-top:18px; font-weight:700; font-size:24px; line-height:1.2; }
+.race{ display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:16px; max-width:964px; margin-top:18px; }
+.lane{ padding:12px 14px 14px; background:var(--tile); color:var(--ink); border-radius:6px; box-shadow:5px 7px 0 var(--tile-edge), 8px 12px 0 var(--bg-deep), inset 1px 1px 0 var(--tile-hi); }
+.lane h2{ margin:0; font-weight:700; font-size:20px; line-height:1.2; }
+.words{ display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; }
+.w{ padding:3px 7px; border:2px dashed var(--edge-dk); border-radius:3px; font-weight:700; font-size:18px; }
+.w span{ visibility:hidden; }
+.w.on{ border:2px solid var(--placed-edge); background:var(--placed); }
+.w.on span{ visibility:visible; }
+.w.read{ border-color:var(--blue); background:var(--blue); color:var(--cream); }
+.count{ margin-top:12px; font-weight:700; font-size:20px; }
+.fine{ max-width:964px; margin-top:14px; font-size:15px; }
+.lane .fine{ margin-top:2px; }
+.tok{ display:block; font-weight:700; font-size:20px; }
+.slide{ display:flex; align-items:center; gap:12px; margin-top:6px; }
+.slide input{ flex:1; min-width:0; height:48px; margin:0; accent-color:var(--blue); cursor:pointer; }
+.slide .btn{ flex:0 0 48px; padding:0; font-size:24px; }
+.bar-row{ margin-top:12px; }
+.bar-lab{ display:flex; flex-wrap:wrap; gap:0 12px; font-weight:700; }
+.bar-lab span{ margin-left:auto; font-weight:400; text-align:right; }
+.bar{ position:relative; height:26px; margin-top:4px; overflow:hidden; background:var(--slot); box-shadow:inset 2px 3px 0 var(--slot-in); }
+.bar i{ position:absolute; left:0; top:0; bottom:0; }
+.f-book{ background:var(--blue); }
+.f-notes{ background:var(--notes); }
+.f-room{ background:var(--placed); box-shadow:inset 0 0 0 2px var(--edge-dk); }
+.bar .f-clear{ left:auto; right:0; width:19.4%; background:repeating-linear-gradient(135deg, #BDAE8B 0 4px, var(--tile) 4px 12px); box-shadow:inset 0 0 0 2px var(--ink); }
+.bar[data-bar="table"] .f-notes{ left:47.5%; }
+.bar.over{ outline:4px solid var(--red); outline-offset:1px; }
+.bar.over .f-notes{ background:var(--red); }
+.bar-sub{ margin-top:6px; font-size:15px; }
+
+/* Ch 3: one note through the four steps */
+.lane h2 + p{ margin-top:8px; }
+.lane p + p{ margin-top:6px; }
+.plotbox{ margin-top:8px; }
+.plot{ display:block; width:100%; height:auto; }
+.plot .ax{ stroke:var(--ink); stroke-width:1.5; }
+.plot .gl{ stroke:var(--blue); stroke-width:1.5; stroke-dasharray:5 4; }
+.plot .dot{ transition:transform 1.5s; transition-delay:calc(var(--i) * 5ms); }
+.plot .dot circle{ fill:var(--edge-dk); stroke:var(--red); stroke-width:0; transition:opacity 1.5s, stroke-width 1.5s, fill 1.5s; }
+.plot .dot path{ fill:var(--red); opacity:0; transition:opacity 1.5s; }
+.plot .dot.out circle{ opacity:0; }
+.plot .dot.out path{ opacity:1; }
+.plot .dot.pick circle{ fill:var(--blue); stroke:var(--tile-hi); stroke-width:1.5; }
+.plot.mix .dot circle{ fill:var(--tile-edge); stroke-width:1.6; }
+.plot.noanim .dot, .plot.noanim .dot *{ transition:none; }
+.plot .ghost{ fill:none; stroke:var(--edge-dk); stroke-width:1.2; }
+.plot .rdot{ fill:var(--edge-dk); }
+.plot .orig{ fill:var(--tile-hi); stroke:var(--edge-dk); stroke-width:1.2; }
+.plot .gapl{ stroke:var(--red); stroke-width:2; }
+.ticks{ position:relative; height:20px; margin-top:2px; font-size:15px; font-weight:700; }
+.ticks span{ position:absolute; top:0; transform:translateX(-50%); line-height:1; white-space:nowrap; }
+.key{ display:flex; align-items:center; gap:8px; margin-top:8px; font-size:15px; }
+.key svg{ flex:0 0 auto; }
+.empty{ display:flex; align-items:center; justify-content:center; min-height:180px; padding:12px; border:2px dashed var(--edge-dk); border-radius:5px; font-weight:700; text-align:center; }
+.lab{ margin-top:16px; font-weight:700; }
+.vals{ display:grid; grid-template-columns:repeat(8, minmax(0,1fr)); gap:6px; margin-top:6px; }
+.vtile{ display:flex; flex-direction:column; gap:6px; min-height:96px; padding:6px 4px 8px; border:0; border-radius:4px; background:var(--slot); color:var(--ink); box-shadow:inset 2px 3px 0 var(--slot-in); font-weight:700; font-size:18px; }
+.vtile:disabled{ cursor:default; }
+.vslot{ flex:1; min-height:46px; display:flex; align-items:center; justify-content:center; border:2px dashed var(--edge-dk); border-radius:4px; }
+.vslot:not(:empty){ border-color:transparent; }
+.vals.sel-on .vslot:empty{ border:3px solid var(--blue); background:rgba(44,95,138,.10); }
+.vnum{ padding:3px 6px; border-radius:3px; background:var(--placed); box-shadow:2px 3px 0 var(--placed-edge); }
+.dragging .vtile.drop-on{ background:var(--gold); outline-color:var(--ink); }
+.drag-ghost.chip{ min-height:44px; padding:0 14px; white-space:nowrap; }
+.btn.go:not(:disabled){ background:var(--gold); box-shadow:3px 4px 0 #A87A1E, 5px 7px 0 var(--bg-deep), inset 1px 1px 0 #F6D58B; }
+.btn.pulse{ animation:pulse .7s 2; }
+@keyframes pulse{ 50%{ transform:scale(1.07); } }
+.what h2{ margin:0 0 6px; font-weight:700; font-size:20px; line-height:1.2; }
+.narrow + .what{ max-width:620px; }
+.tb-say{ margin-top:6px; }
+.bar.len i{ transition:width 1.5s; }
+.bar .mark{ position:absolute; top:0; bottom:0; width:5px; margin-left:-2.5px; background:var(--gold); box-shadow:0 0 0 1.5px var(--ink); }
+.beats{ margin-top:10px; }
+.beats p + p{ margin-top:4px; }
+.nums{ margin-top:8px; border-collapse:collapse; }
+.nums + p{ margin-top:8px; }
+.nums th, .nums td{ padding:4px 12px; border:1px solid var(--edge-dk); text-align:right; }
+.nums th{ font-size:15px; vertical-align:bottom; }
+.ld-steps{ margin:0; padding-left:1.3em; }
+.ld-steps li + li{ margin-top:4px; }
+.vcode{ font-weight:400; font-size:15px; }
+.what p + h2{ margin-top:14px; }
+.tests{ display:grid; gap:16px; max-width:964px; margin-top:18px; }
+.tlane{ display:grid; grid-template-columns:minmax(0,300px) minmax(0,1fr); gap:10px 20px; align-items:start; }
+.tlane, .what, .endcard, .full{ scroll-margin:14px 0; }
+.grid384{ display:grid; grid-template-columns:repeat(32, minmax(0,1fr)); gap:2px; }
+.grid384 i{ aspect-ratio:1; background:var(--slot); box-shadow:inset 1px 1px 0 var(--slot-in); }
+.grid384 i.hit{ background:var(--blue); box-shadow:none; }
+.grid384 i.miss{ box-shadow:none; background:linear-gradient(45deg, transparent 42%, var(--cream) 42% 58%, transparent 58%), linear-gradient(-45deg, transparent 42%, var(--cream) 42% 58%, transparent 58%), var(--red); }
+.chefsay{ display:flex; align-items:center; gap:8px; min-height:46px; margin-top:8px; }
+.chefsay svg{ flex:0 0 auto; }
+
+/* Ch 6: pick the setting */
+.sit{ margin-top:0; }
+.sit p{ margin-top:6px; }
+.sitslot{ display:flex; align-items:center; justify-content:center; gap:8px; width:100%; min-height:56px; margin-top:12px; padding:4px 10px; border:2px dashed var(--edge-dk); border-radius:5px; background:var(--slot); color:var(--ink); font-size:18px; }
+.sitslot.ok{ border:2px solid transparent; background:var(--placed); font-weight:700; box-shadow:3px 4px 0 var(--placed-edge), 4px 6px 0 var(--edge-dk); cursor:default; }
+.sitslot.shake{ animation:shake .35s; }
+.sit.sel-on .sitslot{ border:3px solid var(--blue); background:rgba(44,95,138,.10); }
+.dragging .sit.drop-on .sitslot, .dragging .sitslot.drop-on{ background:var(--gold); }
+.setrack{ margin-top:8px; }
+.setrack .rack-tiles{ grid-template-columns:minmax(0,1fr); }
+.set{ display:flex; flex-direction:column; gap:6px; padding:10px 12px 12px; text-align:left; font-weight:400; font-size:18px; }
+.set:disabled{ cursor:default; }
+.set.won{ outline:4px solid var(--blue); outline-offset:-4px; }
+.set-top{ display:flex; flex-wrap:wrap; align-items:baseline; gap:0 12px; }
+.set-name{ font-weight:700; font-size:20px; }
+.set-sub{ font-size:15px; }
+.set .bar{ display:block; height:20px; margin-top:0; }
+.set-facts{ display:flex; flex-wrap:wrap; justify-content:space-between; gap:0 12px; }
+.drag-ghost.chip.set{ flex-direction:row; align-items:center; gap:0; }
+.drag-ghost.chip.set > :not(.set-top), .drag-ghost.chip.set .set-sub{ display:none; }
+.endcard h2{ margin:14px 0 4px; font-weight:700; font-size:20px; line-height:1.2; }
+.nw{ white-space:nowrap; }
+@media (min-width:1181px){ .game[data-game="ch3"] .rule, .game[data-game="ch6"] .rule{ position:sticky; top:14px; } }
+.narrow{ max-width:620px; }
+.scores{ display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:16px; max-width:964px; margin-top:18px; }
+.lead{ max-width:964px; }
+.ld + .q{ margin-top:20px; }
 
 @media (max-width:1180px){
   .s1{ grid-template-columns:minmax(0,620px); }
@@ -256,8 +381,9 @@ h1, .brand, .big, .q, .rule-top, .tb h2, .bigtxt{ line-height:1.2; }
   .rule-top{ font-size:20px; padding:8px 14px; border-radius:10px 10px 0 0; }
   .rule-art{ display:none; }
   .rule-body{ padding:8px 14px 10px; }
-  .rule-try{ margin-top:6px; padding-top:6px; }
-  .step[data-step="1"]{ padding-bottom:220px; }
+  .game[data-game="ch1"] .step[data-step="1"], .step.has-hint{ padding-bottom:220px; }
+  html:has(.step:not([hidden]) .rule){ scroll-padding-bottom:46vh; }
+  html{ scroll-padding-top:72px; }
 }
 @media (max-width:560px){
   .meter{ min-height:2.9em; }
@@ -269,6 +395,14 @@ h1, .brand, .big, .q, .rule-top, .tb h2, .bigtxt{ line-height:1.2; }
   .seg .star{ flex:0 0 26px; width:26px; height:26px; }
   .slot{ min-height:150px; }
   .slot > svg{ width:96px; height:66px; }
+  .race{ grid-template-columns:minmax(0,1fr); }
+  .racecap{ min-height:6em; }
+  .w{ font-size:15px; }
+  .bars .ruler{ display:block; }
+  .vals{ grid-template-columns:repeat(4, minmax(0,1fr)); }
+  .scores{ grid-template-columns:minmax(0,1fr); }
+  .tlane{ grid-template-columns:minmax(0,1fr); }
+  .grid384{ grid-template-columns:repeat(16, minmax(0,1fr)); }
 }
 
 @media (prefers-reduced-motion: reduce){
@@ -352,17 +486,18 @@ function gstate(id){ return store.g[id]||(store.g[id]=fresh()); }
 
 /* ================= games ================= */
 const GAMES=[
-  {id:'ch1',no:'Ch 1',name:'Set the Table',icon:ICON.table,steps:['Match the Terms','Manage the Recipe Book','Keep Talking'],earn:['Match concepts together','Guess the room left','Fill the table'],build:buildCh1},
-  {id:'ch2',no:'Ch 2',name:'The Chef’s Notes',icon:ICON.layers,steps:['The Race','How Many Tokens Fit?'],build:null},
-  {id:'ch3',no:'Ch 3',name:'Shorthand School',icon:ICON.wave,steps:['Rotate','Round','Find the Error','Fix the Bias'],build:null},
-  {id:'ch6',no:'Ch 6',name:'Pick the Setting',icon:ICON.dial,steps:['Pick the Setting'],build:null}
+  {id:'ch1',no:'Ch 1',name:'How a Large Language Model (LLM) Works',icon:ICON.table,steps:['Match the Terms','Manage the Recipe Book','Keep Talking'],earn:['Match concepts together','Guess the room left','Fill the table'],build:buildCh1},
+  {id:'ch2',no:'Ch 2',name:'Fundamentals of KV-Caching',icon:ICON.layers,steps:['Run the Race','Find the Limit'],earn:['Finish the race','Stop just before full'],build:buildCh2},
+  {id:'ch3',no:'Ch 3',name:'TurboQuant 101',icon:ICON.wave,steps:['Rotate','Round','Find the Error','Fix the Bias','Test the Notes'],earn:['Rotate the vector','Round three numbers','Measure the errors','Apply the fix','Run the three tests'],build:buildCh3},
+  {id:'ch6',no:'Ch 6',name:'Setup for Daily Use',icon:ICON.dial,steps:['One Short Chat','One Long Report','Three Long Reports'],earn:['Pick for 2,000 tokens','Pick for 30,000 tokens','Pick for 90,000 tokens'],build:buildCh6}
 ];
 const gameById=id=>GAMES.find(g=>g.id===id);
 const cur={g:null,step:0,inst:null,api:null};
 
 function head(G,n,o){
+  const todo=Array.isArray(o.do)?`<ol class="ld-steps">${o.do.map(s=>`<li>${s}</li>`).join(' ')}</ol>`:`<p>${o.do}</p>`;
   return `<header class="head"><h1 tabindex="-1">${G.steps[n-1]}</h1></header>
-  <div class="ld"><section class="ld-block learn">${ICON.bulb}<div><p class="ld-label">What You Will Learn</p><p>${o.learn}</p>${o.note?`<p class="ld-note">${o.note}</p>`:''}</div></section><section class="ld-block do">${ICON.hand}<div><p class="ld-label">What You Will Do</p><p>${o.do}</p></div></section></div>`;
+  <div class="ld"><section class="ld-block learn"><p class="ld-label">${ICON.bulb}What You Will Learn</p><div class="ld-body"><p>${o.learn}</p>${o.note?`<p class="ld-note">${o.note}</p>`:''}</div></section><section class="ld-block do"><p class="ld-label">${ICON.hand}What You Will Do</p><div class="ld-body">${todo}</div></section></div>`;
 }
 function navRow(G,n){
   const back=n>1?`<button type="button" class="btn t" data-back="${n-1}" data-test="${G.id}-back-${n}">Back: ${G.steps[n-2]}</button>`:'<button type="button" class="btn" disabled>Back</button>';
@@ -390,7 +525,7 @@ function mount(G){
   const st=gstate(G.id);
   const api=makeApi(G,root,st);
   cur.g=G.id; cur.api=api;
-  cur.inst=(G.build||buildSoon)(api);
+  cur.inst=G.build(api);
   api.replaying=true;
   for(const [t,d] of st.log){ try{ cur.inst.apply(t,d); }catch(e){ console.error('Replay failed',t,e); } }
   api.replaying=false;
@@ -430,14 +565,14 @@ function renderNav(){
         ?`<li><a class="st${now?' now':''}" href="#${G.id}/${n}"${now?' aria-current="step"':''} data-test="nav-${G.id}-${n}">${mark}<span>${name}${done&&!now?'<span class="sr-only"> (done)</span>':''}</span></a></li>`
         :`<li><span class="st locked" data-test="nav-${G.id}-${n}">${mark}<span>${name}<span class="sr-only"> (locked)</span></span></span></li>`;
     }).join('')}</ol>`:'';
-    const tail=st.done?`<span class="gstars">Done: ${st.stars} of 3 stars</span>`:st.stars?`<span class="gstars">${st.stars} of 3 stars</span>`:'';
+    const of=(G.earn||[]).length;
+    const tail=st.done?`<span class="gstars">Done: ${st.stars} of ${of} stars</span>`:st.stars?`<span class="gstars">${st.stars} of ${of} stars</span>`:'';
     return `<li><a class="ch" href="#${G.id}/${here?cur.step:Math.min(st.reached,G.steps.length)}"${here?' aria-current="page"':''} data-test="nav-${G.id}"><span class="space">${here?ICON.cubeLg:G.icon}</span><span class="chtxt"><span class="chno">${G.no}</span><span class="chname">${G.name}</span>${tail}</span></a>${steps}</li>`;
   }).join('');
   renderProgress();
 }
 function renderProgress(){
   const el=$('#progress'), G=gameById(cur.g); if(!el||!G) return;
-  if(!G.build){ el.innerHTML=''; return; }
   const st=gstate(G.id), earn=G.earn||[];
   el.innerHTML=`<nav class="prog" aria-label="Steps in this game"><ol class="segs">${G.steps.map((name,i)=>{
     const n=i+1, open=n<=st.reached, now=n===cur.step, done=n<st.reached||(st.done&&n===G.steps.length);
@@ -481,7 +616,7 @@ window.addEventListener('hashchange',()=>route(false));
 
 /* ================= drag with mouse or touch; a plain tap stays a click; Esc cancels ================= */
 let justDragged=false;
-function enableDrag(root,itemSel,zoneSel,onDrop){
+function enableDrag(root,itemSel,zoneSel,onDrop,chip){
   root.addEventListener('pointerdown',e=>{
     const el=e.target.closest(itemSel);
     if(!el||el.disabled||(e.pointerType==='mouse'&&e.button)) return;
@@ -495,11 +630,11 @@ function enableDrag(root,itemSel,zoneSel,onDrop){
       if(!ghost){
         if(Math.hypot(x-sx,y-sy)<6) return;
         ghost=el.cloneNode(true); ghost.removeAttribute('data-test'); ghost.setAttribute('aria-hidden','true'); ghost.classList.add('drag-ghost');
-        ghost.style.width=r.width+'px'; ghost.style.height=r.height+'px';
+        if(chip) ghost.classList.add('chip'); else{ ghost.style.width=r.width+'px'; ghost.style.height=r.height+'px'; }
         document.body.appendChild(ghost); el.classList.add('drag-src'); root.classList.add('dragging');
         tick=setInterval(()=>{ const d=y<70?-12:y>window.innerHeight-70?12:0; if(d){ window.scrollBy(0,d); hover(); } },30);
       }
-      ghost.style.transform=`translate(${x-(sx-r.left)}px,${y-(sy-r.top)}px) rotate(2deg)`;
+      ghost.style.transform=chip?`translate(${x}px,${y-12}px) translate(-50%,-100%)`:`translate(${x-(sx-r.left)}px,${y-(sy-r.top)}px) rotate(2deg)`;
       hover();
     };
     const stop=drop=>{
@@ -516,14 +651,24 @@ function enableDrag(root,itemSel,zoneSel,onDrop){
   });
 }
 
-/* ================= placeholder for games not rebuilt yet ================= */
-function buildSoon(api){
-  const G=api.G;
-  api.root.innerHTML=`<section class="step" data-step="1" hidden>
-    <header class="head"><div><p class="kicker">${G.no} ${G.name}</p><h1 tabindex="-1">Coming next</h1></div></header>
-    <div class="soon"><p class="big">This game is being rebuilt in the new design.</p><p>Chapter 1 comes first, so you can review the pattern before the other games change.</p></div>
-    <div class="navrow"><a class="btn t" href="#ch1/1">Go to Ch 1 Set the Table</a></div></section>`;
-  return {apply(){}};
+function enableTap(root,itemSel,zoneSel,onDrop,onState){
+  root.addEventListener('click',e=>{
+    if(justDragged) return;
+    const item=e.target.closest(itemSel), zone=!item&&e.target.closest(zoneSel);
+    const at=item||zone; if(!at||at.disabled||!root.contains(at)) return;
+    const sel=$$(itemSel,at.closest('.step')).find(x=>x.getAttribute('aria-pressed')==='true');
+    if(item){
+      if(sel) sel.setAttribute('aria-pressed','false');
+      if(sel!==item) item.setAttribute('aria-pressed','true');
+      if(onState) onState(sel===item?'down':'sel',item);
+    }
+    else if(sel){ sel.setAttribute('aria-pressed','false'); onDrop(sel,zone); }
+    else if(onState) onState('nosel',null);
+  });
+}
+
+function hintCard(el,cls,top,body){
+  el.innerHTML=`<div class="rule-top ${cls}">${cls==='good'?ICON.checkW:cls==='bad'?ICON.cross:''}<span>${top}</span></div><div class="rule-body">${body}</div>`;
 }
 
 /* ================= Ch 1 · Set the table ================= */
@@ -550,7 +695,7 @@ function buildCh1(api){
     {id:'report',k:'doc',name:'Paste a 10‑Page Report',add:15.6},
     {id:'pages',k:'doc',name:'Paste 25 More Pages',add:38.9},
     {id:'appendix',k:'doc',name:'Add a 30‑Page Appendix',add:46.7}];
-  const S={order:null,sel:null,matched:{},missed:{},wrong:0,book:false,pred:null,used:[],total:0,cells:0,full:false,last:'start'};
+  const S={order:null,sel:null,matched:{},missed:{},book:false,pred:null,used:[],total:0,cells:0,full:false,last:'start'};
   const step=n=>$(`.step[data-step="${n}"]`,root);
   const plain=s=>s.replace(/[“”]/g,'"');
 
@@ -566,7 +711,7 @@ function buildCh1(api){
 
   root.innerHTML=`
   <section class="step" data-step="1" hidden>
-    ${head(G,1,{learn:'The words you need to understand TurboQuant. These six terms explain what fills GPU memory and what TurboQuant makes smaller.',note:'Chapter 2 of the tutorial introduces this kitchen concept to explain TurboQuant.',do:'Drag each technical term from the rack onto its kitchen item. Or tap a term, then tap its match. If the match is right, the term stays and a blue box explains why. If it is wrong, a red box gives you a hint. Try again.'})}
+    ${head(G,1,{learn:'The words you need to understand <b>TurboQuant</b>. These six terms explain what fills <b>GPU memory</b> and what TurboQuant makes smaller.',note:'Chapter 2 of the tutorial introduces this kitchen concept to explain TurboQuant.',do:['Drag each technical term from the rack onto its kitchen item. Or tap a term, then tap its match.','If the match is right, the term stays and a <span class="c-blue">blue box</span> explains why. If it is wrong, a <span class="c-red">red box</span> gives you a hint. Try again.']})}
     <div class="s1">
       <div>
         <div class="board" data-board>
@@ -580,7 +725,7 @@ function buildCh1(api){
   </section>
 
   <section class="step" data-step="2" hidden>
-    ${head(G,2,{learn:'How much of the table the recipe book takes.',do:'Drag the recipe book onto the table. Then say how much room is left for notes.'})}
+    ${head(G,2,{learn:'How much of the <b>table</b> the <b>recipe book</b> takes.',do:['Drag the recipe book onto the table.','Then say how much room is left for notes.']})}
     ${table('s2',false)}
     <div class="s2-act"><button type="button" class="booktile" data-do="book" data-test="ch1-place-book">${art('book',93,64)}<span>Recipe Book (Model Weights)</span></button></div>
     <div class="predict" data-predict hidden>
@@ -592,7 +737,7 @@ function buildCh1(api){
   </section>
 
   <section class="step" data-step="3" hidden>
-    ${head(G,3,{learn:'The notes grow with each token. The recipe book does not.',do:'Drag each item onto the notes, in any order. Or tap an item to add it.'})}
+    ${head(G,3,{learn:'The <b>notes</b> grow with each <b>token</b>. The <b>recipe book</b> does not.',do:'Drag each item onto the notes, in any order. Or tap an item to add it.'})}
     <div class="s3-board">${table('s3',true)}<p class="stamp" data-stamp hidden>Table full</p></div>
     <p class="meter" data-meter data-test="ch1-meter">Room for notes used: 0%</p>
     <div class="tray" data-tray role="group" aria-label="Items to add to the notes">${MSG.map(m=>`<button type="button" class="evt ${m.k}" data-card="${m.id}" data-test="ch1-card-${m.id}"><span class="evt-art">${m.k==='chef'?ICON.chef:m.k==='you'?ICON.bubble:ICON.pages}</span><span class="evt-name">${m.name}</span><span class="evt-add" data-state>Adds ${m.add}% of the room for notes</span></button>`).join('')}</div>
@@ -614,7 +759,7 @@ function buildCh1(api){
   </ul></details>`;
 
   function starsNow(){
-    return [Object.keys(S.matched).length===6&&S.wrong<=2, S.pred==='third', S.full];
+    return [Object.keys(S.matched).length===6, S.pred==='third', S.full];
   }
   const award=()=>api.stars(starsNow());
 
@@ -627,9 +772,6 @@ function buildCh1(api){
       ?left.map(id=>{ const t=TERMS.find(x=>x.id===id); return `<button type="button" class="term" data-term="${id}" aria-pressed="${S.sel===id}" data-test="ch1-term-${id}">${t.label}</button>`; }).join('')
       :'<p class="rack-done">All six terms are on the board.</p>';
     $('[data-board]',root).classList.toggle('sel-on',!!S.sel);
-  }
-  function mistakes(){
-    return `<p class="rule-try" data-tries>Mistakes so far: ${S.wrong} (the star needs 2 or fewer)</p>`;
   }
   function rule(kind,o={}){
     S.last=kind;
@@ -648,9 +790,9 @@ function buildCh1(api){
       cls='good'; top=`Right: ${o.term.label} = ${o.slot.name}.`;
       body=art(o.slot.id,186,128,'rule-art')
         +`<p data-why data-test="ch1-why">${o.term.right}</p>`
-        +(o.done?`<p><b>All six matched.</b> ${S.wrong<=2?'You earned the star.':'No star this time: more than 2 mistakes.'}</p>`:'');
+        +(o.done?'<p><b>All six matched.</b> You earned the star.</p>':'');
     }
-    $('[data-rule]',root).innerHTML=`<div class="rule-top ${cls}">${cls==='good'?ICON.checkW:cls==='bad'?ICON.cross:''}<span>${top}</span></div><div class="rule-body">${body}${mistakes()}</div>`;
+    $('[data-rule]',root).innerHTML=`<div class="rule-top ${cls}">${cls==='good'?ICON.checkW:cls==='bad'?ICON.cross:''}<span>${top}</span></div><div class="rule-body">${body}</div>`;
   }
   function select(id){
     const down=S.sel===id;
@@ -674,14 +816,14 @@ function buildCh1(api){
       renderRack();
       const done=Object.keys(S.matched).length===6;
       rule('right',{term,slot,done});
-      if(done){ award(); $('[data-next="2"]',root).disabled=false; api.say(`Right. All six matched. ${S.wrong<=2?'You earned the star.':'No star this time.'}`); if(!api.replaying) $('[data-next="2"]',root).focus(); }
+      if(done){ award(); $('[data-next="2"]',root).disabled=false; api.say('Right. All six matched. You earned the star.'); if(!api.replaying) $('[data-next="2"]',root).focus(); }
       else{ api.say(`Right: ${term.label} = ${plain(slot.name)}.`); if(!api.replaying){ const n=$('[data-term]',root); if(n) n.focus(); } }
     }else{
-      S.wrong++; S.missed[term.id]=(S.missed[term.id]||0)+1; S.sel=null; renderRack();
+      S.missed[term.id]=(S.missed[term.id]||0)+1; S.sel=null; renderRack();
       const b=$(`[data-slot="${slot.id}"]`,root);
       if(!api.rm()){ b.classList.remove('shake'); void b.offsetWidth; b.classList.add('shake'); }
       rule('wrong',{term});
-      api.say(`Not this one. Mistakes so far: ${S.wrong}.`);
+      api.say('Not this one.');
       if(!api.replaying){ const t=$(`[data-term="${term.id}"]`,root); if(t) t.focus({preventScroll:true}); }
     }
   }
@@ -748,7 +890,7 @@ function buildCh1(api){
     const e=$('[data-end]',root);
     e.innerHTML=`<p class="big">Game complete. Stars: ${starsNow().filter(Boolean).length} of 3.</p>
       <p>The model loads once and stays the same size. Every token in the chat adds a note to the same table.</p>
-      <div class="row"><button type="button" class="btn t" data-again data-test="ch1-again">Play again</button><a class="btn next" href="#ch2/1" data-test="ch1-next-game">Next game: Ch 2 The Chef’s Notes</a></div>`;
+      <div class="row"><button type="button" class="btn t" data-again data-test="ch1-again">Play again</button><a class="btn next" href="#ch2/1" data-test="ch1-next-game">Next game: Ch 2 Fundamentals of KV-Caching</a></div>`;
     e.hidden=false;
   }
 
@@ -783,6 +925,750 @@ function buildCh1(api){
       if(S.last!=='right'&&S.last!=='wrong') rule('start');
       award();
     }
+  };
+}
+
+/* ================= Ch 2 · The chef's notes ================= */
+function buildCh2(api){
+  const G=api.G, root=api.root;
+  const WORDS='Add the garlic, stir it slowly, then taste before you add salt.'.split(' ');
+  const N=WORDS.length, TICK=300, LIMIT=38544, LOW=34690, ROOM=5.3, BOOK=7.6, CLEAR=3.1;
+  const EV=[]; for(let n=1;n<=N;n++){ for(let i=0;i<n-1;i++) EV.push([n,i]); EV.push([n,-1]); }
+  const HINT={
+    low:['The table still has room. Look at the Room Left bar.','Move the slider to the right until Room Left is almost 0 GB.'],
+    high:['The table is over its limit. The Whole Table bar is red.','Move the slider to the left until the Whole Table bar is not red.']};
+  const S={raced:false,running:false,run:0,tok:8000,found:false,missed:{low:0,high:0},kind:''};
+  const step=n=>$(`.step[data-step="${n}"]`,root);
+  const fmt=n=>n.toLocaleString('en-US');
+  const lane=(k,name)=>`<div class="lane" data-lane="${k}"><h2>${name}</h2>
+      <div class="words" aria-hidden="true">${WORDS.map(w=>`<span class="w"><span>${w}</span></span>`).join('')}</div>
+      <p class="count">Tokens processed: <span data-count data-test="ch2-count-${k}">0</span></p>
+      <p class="fine">Notes saved: <span data-notes data-test="ch2-notes-${k}">0</span></p></div>`;
+  const bar=(k,name)=>`<div class="bar-row"><p class="bar-lab">${name}<span data-val="${k}" data-test="ch2-bar-${k}"></span></p><div class="bar" data-bar="${k}" aria-hidden="true">${k==='table'?'<i class="f-book"></i><i class="f-clear"></i><i class="f-notes"></i>':`<i class="f-${k}"></i>`}</div></div>`;
+
+  root.innerHTML=`
+  <section class="step" data-step="1" hidden>
+    ${head(G,1,{learn:'<b>KV-Caching</b> saves work. The chef reads <b>saved notes</b> and does not re-read the earlier tokens.',do:['<b>Press Start.</b>','Watch how many tokens each chef must process to write the same sentence.']})}
+    <p class="racecap" data-cap data-test="ch2-cap"></p>
+    <div class="row"><button type="button" class="btn t" data-do="start" data-test="ch2-start">Start</button><button type="button" class="btn ghost" data-do="skip" data-test="ch2-skip">Skip to finish</button></div>
+    <p class="sr-only">Both chefs write this sentence: ${WORDS.join(' ')}</p>
+    <div class="race">${lane('std','Standard Inference')}${lane('kv','KV-Caching')}</div>
+    <p class="fine">In this race, each word is 1 token.</p>
+    <div class="verdict good" data-verdict data-test="ch2-race-verdict" hidden><p><b>Both chefs wrote the same ${N} words.</b> Standard inference processed ${EV.length} tokens. KV-Caching processed ${N}.</p><p>The cost: ${N} notes on the table. The notes use GPU memory.</p></div>
+    ${navRow(G,1)}
+  </section>
+
+  <section class="step has-hint" data-step="2" hidden>
+    ${head(G,2,{learn:'Each <b>token</b> adds one <b>note</b> to the table. The notes grow until <b>GPU memory</b> is full.',do:['Move the slider.','Stop at the largest number of tokens that still fits.','Then <b>press Check.</b>']})}
+    <div class="s1">
+      <div>
+        <p class="q">How many tokens fit before GPU memory is full?</p>
+        <label class="tok" for="ch2-range">Tokens in the conversation: <span data-tok data-test="ch2-tok"></span></label>
+        <div class="slide"><button type="button" class="btn t" data-step-by="-500" aria-label="500 fewer tokens" data-test="ch2-minus">−</button><input type="range" id="ch2-range" min="1000" max="100000" step="500" value="8000" data-range data-test="ch2-slider"><button type="button" class="btn t" data-step-by="500" aria-label="500 more tokens" data-test="ch2-plus">+</button></div>
+        <div class="tb bars">
+          <h2>16 GB Table (GPU Memory)</h2>
+          <div class="ruler" aria-hidden="true"><span>0</span><span style="left:25%">4</span><span style="left:50%">8</span><span style="left:75%">12</span><span style="left:100%">16 GB</span></div>
+          ${bar('book','Recipe Book')}${bar('notes','Notes')}${bar('room','Room Left')}${bar('table','Whole Table')}
+          <p class="bar-sub" data-sum data-test="ch2-sum"></p>
+        </div>
+        <div class="row"><button type="button" class="btn t" data-do="check" data-test="ch2-check">Check</button></div>
+      </div>
+      <div class="rule" data-rule data-test="ch2-rule" aria-live="polite"></div>
+    </div>
+    <div class="full" data-full tabindex="-1" data-test="ch2-full" hidden>
+      <p class="big">The table is full at 38,544 tokens.</p>
+      <p>When the table is full, the LLM must stop, discard older notes, move them somewhere slower, or use a shorter conversation.</p>
+    </div>
+    <div class="endcard" data-end data-test="ch2-end" hidden></div>
+    ${navRow(G,2)}
+  </section>
+
+  <details class="fold" data-steps="1 2"><summary>Where the Numbers Come From</summary><ul>
+    <li>The race is an example, not a measurement. It counts each word as 1 token. To write word 5, standard inference processes 5 tokens: it re-reads 4 and writes 1. For 12 words, that is 1 + 2 + … + 12 = 78. With KV-Caching, each word needs 1.</li>
+    <li>38,544 tokens is measured on the tutorial’s RTX 5080 16 GB card with vLLM 0.25.0 and Qwen3-4B, started with <code>--gpu-memory-utilization 0.85</code>.</li>
+    <li>The recipe book (7.6 GB), the room for notes (5.3 GB) and the part kept clear (3.1 GB) are the same as in Ch 1.</li>
+    <li>The bars use 5.3 GB ÷ 38,544 tokens, so they reach full at the measured limit. That is about 144 KiB for each token.</li>
+    <li>About 29,000 words assumes that 1 token is about 0.75 words.</li>
+  </ul></details>`;
+
+  const starsNow=()=>[S.raced, S.found];
+  const award=()=>api.stars(starsNow());
+
+  /* step 1 */
+  function setLane(k,written,count,notes,read){
+    const L=$(`[data-lane="${k}"]`,root);
+    $$('.w',L).forEach((w,i)=>{ w.classList.toggle('on',i<written); w.classList.toggle('read',i===read); });
+    $('[data-count]',L).textContent=count; $('[data-notes]',L).textContent=notes;
+  }
+  function frame(ri,ni){
+    const e=ri?EV[ri-1]:null;
+    setLane('std',e?(e[1]<0?e[0]:e[0]-1):0,ri,0,e&&e[1]>=0?e[1]:-1);
+    setLane('kv',ni,ni,ni,-1);
+    $('[data-cap]',root).textContent=!e?'Press Start. Watch how many tokens each chef must process.'
+      :ri>=EV.length?'The race is over.'
+      :`Word ${e[0]}: Standard inference re‑reads ${e[0]-1} ${e[0]===2?'token':'tokens'}, then writes.${ni<N?' KV‑Caching reads its notes, then writes.':` KV‑Caching has finished all ${N} words.`}`;
+  }
+  function btns(){
+    const t=step(1), a=$('[data-do="start"]',t);
+    a.textContent=S.raced?'Run again':'Start'; a.disabled=S.running; a.hidden=S.raced&&prefersRM();
+    $('[data-do="skip"]',t).hidden=S.raced&&!S.running;
+  }
+  function start(){
+    if(S.running) return;
+    if(api.rm()){ if(!S.raced) api.do('race'); return; }
+    S.running=true; btns();
+    const run=++S.run; let ri=0, ni=0;
+    (function tick(){
+      if(run!==S.run||!root.isConnected) return;
+      ri++; if(ni<N) ni++;
+      frame(ri,ni);
+      if(ri<EV.length) setTimeout(tick,TICK);
+      else if(S.raced) raced(); else api.do('race');
+    })();
+  }
+  function raced(){
+    const first=!S.raced;
+    S.raced=true; S.running=false; S.run++;
+    frame(EV.length,N); btns();
+    const v=$('[data-verdict]',step(1)), next=$('[data-next="2"]',root);
+    v.hidden=false; next.disabled=false;
+    award();
+    if(first){ api.say(v.textContent); if(!api.replaying) next.focus(); }
+  }
+
+  /* step 2 */
+  function bars(v){
+    const t=step(2), notes=v*ROOM/LIMIT, room=Math.max(0,ROOM-notes), over=v>LIMIT;
+    const pc=gb=>Math.min(100,gb/16*100)+'%';
+    const r=$('[data-range]',t); if(+r.value!==v) r.value=v;
+    r.setAttribute('aria-valuetext',`${fmt(v)} tokens`);
+    $('[data-tok]',t).textContent=fmt(v);
+    $('[data-val="book"]',t).textContent=`${BOOK} GB (never changes)`;
+    $('[data-val="notes"]',t).textContent=`${notes.toFixed(1)} GB`;
+    $('[data-val="room"]',t).textContent=`${room.toFixed(1)} GB`;
+    $('[data-val="table"]',t).textContent=`${(BOOK+CLEAR+notes).toFixed(1)} of 16 GB${over?'. It does not fit.':''}`;
+    $('[data-bar="book"] i',t).style.width=pc(BOOK);
+    $('[data-bar="notes"] i',t).style.width=pc(notes);
+    $('[data-bar="room"] i',t).style.width=pc(room);
+    const tb=$('[data-bar="table"]',t); tb.classList.toggle('over',over);
+    $('.f-book',tb).style.width=pc(BOOK); $('.f-notes',tb).style.width=pc(notes);
+    $('[data-sum]',t).textContent=`Recipe book ${BOOK} GB + notes ${notes.toFixed(1)} GB + kept clear ${CLEAR} GB`;
+  }
+  function card(kind){
+    let cls='', top='Move the slider. Then press Check.', body='';
+    if(kind==='wrong'){
+      const n=S.missed[S.kind], h=HINT[S.kind];
+      cls='bad'; top='Not yet.';
+      body=`<div data-test="ch2-hint">${n===1?`<p>${h[0]}</p>`:n===2?`<p>${h[1]}</p>`:`<p>${h[0]}</p><p>${h[1]}</p><p><b>Try again.</b></p>`}</div>`;
+    }
+    else if(kind==='right'){
+      cls='good'; top='Right: 38,544 tokens fit.';
+      body='<p data-why data-test="ch2-why">That is about 29,000 words.</p><p>You earned the star.</p>';
+    }
+    hintCard($('[data-rule]',root),cls,top,body);
+  }
+  function check(v){
+    if(S.found) return;
+    S.tok=v; bars(v);
+    if(v<LOW||v>LIMIT){
+      S.kind=v<LOW?'low':'high'; S.missed[S.kind]++;
+      card('wrong'); api.say('Not yet.');
+      return;
+    }
+    S.found=true;
+    const t=step(2), full=$('[data-full]',t);
+    $('[data-range]',t).disabled=true;
+    $$('[data-step-by], [data-do="check"]',t).forEach(b=>{ b.disabled=true; });
+    card('right'); award();
+    full.hidden=false; api.finish(); endCard();
+    if(!api.replaying){ full.focus({preventScroll:true}); full.scrollIntoView({block:'nearest',behavior:api.rm()?'auto':'smooth'}); }
+    api.say('Right: 38,544 tokens fit. That is about 29,000 words.');
+  }
+  function endCard(){
+    const e=$('[data-end]',root);
+    e.innerHTML=`<p class="big">Game complete. Stars: ${starsNow().filter(Boolean).length} of 2.</p>
+      <p>KV-Caching saves work, and the saved notes use GPU memory.</p>
+      <div class="row"><button type="button" class="btn t" data-again data-test="ch2-again">Play again</button><a class="btn next" href="#ch3/1" data-test="ch2-next-game">Next game: Ch 3 TurboQuant 101</a></div>`;
+    e.hidden=false;
+  }
+
+  const range=$('[data-range]',root);
+  range.addEventListener('input',()=>bars(+range.value));
+  range.addEventListener('change',()=>api.do('set',+range.value));
+  root.addEventListener('click',e=>{
+    const el=e.target.closest('button'); if(!el||el.disabled||!root.contains(el)) return;
+    if(el.dataset.do==='start') return start();
+    if(el.dataset.do==='skip') return S.raced?raced():api.do('race');
+    if(el.dataset.do==='check') return api.do('check',+range.value);
+    if(el.dataset.stepBy) return api.do('set',Math.max(1000,Math.min(100000,+range.value+ +el.dataset.stepBy)));
+  });
+
+  frame(0,0); btns(); bars(S.tok); card('start');
+  return {
+    apply(type,d){
+      if(type==='race') raced();
+      else if(type==='set'){ if(!S.found){ S.tok=d; bars(d); } }
+      else if(type==='check') check(d);
+    },
+    ready(){ award(); }
+  };
+}
+
+/* ================= Ch 3 · Shorthand school ================= */
+const TOY=(function(){ let c=null; return function(){ if(c) return c;
+  function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+  function gauss(rng){let u=0,v=0;while(!u)u=rng();while(!v)v=rng();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v)}
+  const D=64,NC=32,PER=8,NK=NC*PER,NQ=384,OUT=[3,17,31,45];
+  const rng=mulberry32(1234);
+  const centers=Array.from({length:NC},()=>Float64Array.from({length:D},()=>gauss(rng)));
+  const base=[]; for(const ce of centers)for(let p=0;p<PER;p++) base.push(Float64Array.from({length:D},(_,i)=>ce[i]+gauss(rng)*0.15));
+  const signs=Float64Array.from({length:D},()=>rng()<0.5?-1:1);
+  const qNoise=Array.from({length:NQ},()=>Float64Array.from({length:D},()=>gauss(rng)*0.1));
+  const qT=Array.from({length:NQ},(_,i)=>i%NK);
+  function wht(v){const y=Float64Array.from(v);for(let len=1;len<D;len<<=1)for(let i=0;i<D;i+=len<<1)for(let j=i;j<i+len;j++){const a=y[j],b=y[j+len];y[j]=a+b;y[j+len]=a-b;}const s=1/Math.sqrt(D);for(let i=0;i<D;i++)y[i]*=s;return y}
+  function rotFwd(v){const t=new Float64Array(D);for(let i=0;i<D;i++)t[i]=v[i]*signs[i];return wht(t)}
+  function rotInv(v){const t=wht(v);for(let i=0;i<D;i++)t[i]*=signs[i];return t}
+  const mx=v=>{let m=0;for(const x of v)m=Math.max(m,Math.abs(x));return m};
+  function quant(v,bits){const L=1<<bits,m=mx(v);if(!m)return Float64Array.from(v);
+    const step=2*m/L,out=new Float64Array(D);for(let i=0;i<D;i++){let k=Math.floor((v[i]+m)/step);k=Math.max(0,Math.min(L-1,k));out[i]=-m+(k+0.5)*step;}return out}
+  function spotIdx(v,bits){const L=1<<bits,m=mx(v),step=2*m/L;return Array.from(v,x=>Math.max(0,Math.min(L-1,Math.floor((x+m)/step))))}
+  function dot(a,b){let s=0;for(let i=0;i<D;i++)s+=a[i]*b[i];return s}
+  function test(deq){const dn=deq.map(v=>Math.sqrt(dot(v,v))||1),miss=[];let ch=0;
+    for(let qi=0;qi<NQ;qi++){const t=qT[qi],q=new Float64Array(D);for(let i=0;i<D;i++)q[i]=notes[t][i]+qNoise[qi][i];
+      const s=dot(q,notes[t]);ch+=Math.abs(dot(q,deq[t])-s)/Math.abs(s);
+      let best=-1,bv=-Infinity;for(let k=0;k<NK;k++){const d=dot(q,deq[k])/dn[k];if(d>bv){bv=d;best=k}}if(best!==t)miss.push(qi)}
+    return {miss,shift:ch/NQ}}
+  const gap=(a,b)=>{let s=0,g=0;for(let i=0;i<D;i++){const d=Math.abs(a[i]-b[i]);s+=d;g=Math.max(g,d)}return [s/D,g]};
+  const notes=base.map(k=>{const v=Float64Array.from(k);for(const i of OUT)v[i]*=4;return v});
+  const before=notes[0], after=rotFwd(before), rounded=quant(after,3), m=mx(after), mb=mx(before), plain=quant(before,3);
+  const grid=x=>Array.from({length:8},(_,k)=>-x+(k+0.5)*(2*x/8));
+  const ratio=notes.map(k=>{const r=rotFwd(k),q=quant(r,3);return Math.sqrt(dot(q,q)/dot(r,r))});
+  const tests=[notes,notes.map(k=>quant(k,3)),notes.map(k=>rotInv(quant(rotFwd(k),3)))].map(test);
+  c={OUT,NQ,NK,before,after,rounded,idx:spotIdx(after,3),vals:grid(m),max:[mb,m],typ:after.reduce((s,v)=>s+Math.abs(v),0)/D,noRot:{rounded:plain,vals:grid(mb)},
+    len:[Math.sqrt(dot(after,after)),Math.sqrt(dot(rounded,rounded))],lenRange:[Math.min(...ratio),Math.max(...ratio)],
+    gap:gap(after,rounded),gapNoRot:gap(before,plain),
+    score:tests.map(t=>NQ-t.miss.length),miss:tests.map(t=>t.miss),shift:tests.map(t=>t.shift)};
+  return c;
+}})();
+
+const PLOT={W:480,H:214,B:200,L:22,R:458};
+const plotX=(v,M)=>PLOT.L+(v+M)/(2*M)*(PLOT.R-PLOT.L);
+const plotTicks=(M,list)=>`<div class="ticks" aria-hidden="true">${list.map(t=>`<span style="left:${(plotX(t,M)/PLOT.W*100).toFixed(2)}%">${String(t).replace('-','−')}</span>`).join('')}</div>`;
+function makePlot(host,M,ticks,ghost){
+  const {W,H,B,L,R}=PLOT, d=9, X=v=>plotX(v,M);
+  host.innerHTML=`<svg class="plot" viewBox="0 0 ${W} ${H}" role="img"><line class="ax" x1="${L}" x2="${R}" y1="${B+1}" y2="${B+1}"/><g>${`<line class="gl" x1="0" x2="0" y1="26" y2="${B+1}"/>`.repeat(8)}</g>${ghost?`<g hidden>${'<circle class="ghost"/>'.repeat(64)}</g>`:''}<g>${Array.from({length:64},(_,i)=>`<g class="dot" style="--i:${i}"><circle r="4.1"/><path d="M0 -6L6 0 0 6-6 0Z"/></g>`).join('')}</g></svg>${plotTicks(M,ticks)}`;
+  const svg=host.firstChild, gls=$$('.gl',svg), dots=$$('.dot',svg), ghosts=$$('.ghost',svg);
+  return {set(s,instant){
+    if(instant) svg.classList.add('noanim');
+    const n=s.vals.length, ord=[...Array(n).keys()].sort((a,b)=>s.vals[a]-s.vals[b]);
+    const cols=at=>{ const p=new Array(n), cnt={}; for(const i of ord){ const k=s.idx[i], j=(cnt[k]=(cnt[k]||0)+1)-1; p[i]=[X(at[k])+((j%3)-1)*d,B-6-Math.floor(j/3)*d]; } return p; };
+    let pos;
+    if(s.idx) pos=cols(s.at||s.grid);
+    else{ pos=new Array(n); const placed=[]; for(const i of ord){ const x=X(s.vals[i]); let row=0; while(placed.some(p=>p[1]===row&&Math.abs(p[0]-x)<d)) row++; placed.push([x,row]); pos[i]=[x,B-6-row*d]; } }
+    const rad=i=>s.pick&&s.pick.includes(i)?6:s.ring?3.6:4.1;
+    dots.forEach((g,i)=>{
+      g.style.transform=`translate(${pos[i][0].toFixed(1)}px,${pos[i][1].toFixed(1)}px)`;
+      g.classList.toggle('out',!!s.out&&s.out.includes(i)); g.classList.toggle('pick',rad(i)===6);
+      g.firstChild.setAttribute('r',rad(i));
+    });
+    svg.classList.toggle('mix',!!s.ring);
+    if(ghosts.length){
+      ghosts[0].parentNode.toggleAttribute('hidden',!s.ghost);
+      if(s.ghost){ const old=cols(s.grid); ghosts.forEach((c,i)=>{ c.setAttribute('cx',old[i][0].toFixed(1)); c.setAttribute('cy',old[i][1].toFixed(1)); c.setAttribute('r',rad(i)); }); }
+    }
+    gls.forEach((l,k)=>{ l.style.display=s.grid?'':'none'; if(s.grid){ const x=X(s.grid[k]).toFixed(1); l.setAttribute('x1',x); l.setAttribute('x2',x); } });
+    svg.setAttribute('aria-label',s.label);
+    if(instant){ void svg.getBoundingClientRect(); requestAnimationFrame(()=>svg.classList.remove('noanim')); }
+  }};
+}
+
+function buildCh3(api){
+  const G=api.G, root=api.root, T=TOY(), NQ=T.NQ;
+  const PICK=[0,1,3], F=T.len[0]/T.len[1], TK4=[-4,-2,0,2,4], TK8=[-8,-4,0,4,8];
+  const r2=x=>+x.toFixed(2), f2=x=>x.toFixed(2).replace('-','−');
+  const NUMS=PICK.map(i=>{
+    const v=r2(T.after[i]), k=T.idx[i], to=r2(T.vals[k]), other=r2(T.vals[v>to?k+1:k-1]);
+    return {i,k,txt:f2(v),to:f2(to),nc:f2(T.rounded[i]*F),lo:f2(Math.min(to,other)),hi:f2(Math.max(to,other)),gap:f2(Math.abs(v-to))};
+  });
+  const LEN=T.len.map(f2), SHORT=Math.round((1-1/F)*100), HI=Math.ceil(T.len[0]*5)/5, LO=HI-0.8;
+  const pct=v=>((v-LO)/(HI-LO)*100).toFixed(1)+'%';
+  const cnt={}; T.noRot.rounded.forEach(v=>{ const k=v.toFixed(2); cnt[k]=(cnt[k]||0)+1; });
+  const TOP2=Object.values(cnt).sort((a,b)=>b-a).slice(0,2).reduce((a,b)=>a+b,0);
+  const RANGE=T.lenRange.map(x=>Math.round((x-1)*100));
+  const TYP=Math.round(100*T.gap[0]/T.typ), SHIFT=T.shift.map(x=>Math.round(100*x)), MISS=T.score.map(s=>NQ-s);
+  const S={rot:false,placed:{},missed:{},rest:false,cmp:false,norot:false,ncb:0,nc:false,t:[0,0,0],test:false};
+  const step=n=>$(`.step[data-step="${n}"]`,root);
+  const KEY_OUT='<svg width="14" height="14" viewBox="-7 -7 14 14" aria-hidden="true" focusable="false"><path d="M0 -6L6 0 0 6-6 0Z" fill="#A8322A"></path></svg>';
+  const KEY_RING='<svg width="14" height="14" viewBox="-7 -7 14 14" aria-hidden="true" focusable="false"><circle r="4.6" fill="#B8A882" stroke="#A8322A" stroke-width="2.6"></circle></svg>';
+  const KEY_DOT='<svg width="14" height="14" viewBox="-7 -7 14 14" aria-hidden="true" focusable="false"><circle r="4.6" fill="#5C5240"></circle></svg>';
+  const KEY_GHOST='<svg width="14" height="14" viewBox="-7 -7 14 14" aria-hidden="true" focusable="false"><circle r="5" fill="none" stroke="#5C5240" stroke-width="1.6"></circle></svg>';
+  const KEY_LINE='<svg width="24" height="14" viewBox="0 0 24 14" aria-hidden="true" focusable="false"><path d="M1 7H23" stroke="#2C5F8A" stroke-width="2" stroke-dasharray="5 4"></path></svg>';
+  const KEY_PICK='<svg width="14" height="14" viewBox="-7 -7 14 14" aria-hidden="true" focusable="false"><circle r="6" fill="#2C5F8A"></circle></svg>';
+  const KEY_GAP='<svg width="24" height="14" viewBox="0 0 24 14" aria-hidden="true" focusable="false"><path d="M1 7H23" stroke="#A8322A" stroke-width="3"></path></svg>';
+  const KEY_MARK='<svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true" focusable="false"><rect x="4.5" y="0.75" width="5" height="12.5" fill="#E9B44C" stroke="#1E1A16" stroke-width="1.5"></rect></svg>';
+  const KEY_HIT='<svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true" focusable="false"><rect width="14" height="14" fill="#2C5F8A"></rect></svg>';
+  const KEY_MISS='<svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true" focusable="false"><rect width="14" height="14" fill="#A8322A"></rect><path d="M3 3L11 11M11 3L3 11" stroke="#F7F0DF" stroke-width="2"></path></svg>';
+  const what=(n,html)=>`<div class="verdict good what" data-what="${n}" data-test="ch3-what-${n}" hidden><h2>What Happened</h2>${html}</div>`;
+  const TESTS=[
+    {key:'full',name:'Full Vectors',sub:'16 bits for each number',btn:'Test full vectors',words:'The model (the chef) finds the right vector in every lookup.'},
+    {key:'round',name:'Round Only',sub:'3 bits for each number, without Rotate',btn:'Test Round only',words:`The model (the chef) misses ${MISS[1]} of the ${NQ} lookups. The 4 outliers stretched the allowed values.`},
+    {key:'rot',name:'Rotate + Round',sub:'3 bits for each number, with Rotate',btn:'Test Rotate + Round',words:`The model (the chef) misses ${MISS[2]} of the ${NQ} lookups. The vectors are much smaller, and the model still finds almost every one.`}];
+  const lane5=(o,k)=>`<div class="lane tlane" data-lane="${k}" data-test="ch3-score-${o.key}"><div><h2>${o.name}</h2><p>${o.sub}</p>
+        <div class="row"><button type="button" class="btn t go" data-do="t${k+1}"${k?' disabled':''} data-test="ch3-test-${k+1}">${o.btn}</button></div>
+        <p class="chefsay">${ICON.chef}<span data-say>Not tested.</span></p>
+        <p class="big" data-found>Found: 0 of ${NQ}</p><p class="big" data-missed>Misses: 0</p></div>
+        <div class="grid384" role="img" aria-label="${o.name}: not tested." data-grid>${'<i></i>'.repeat(NQ)}</div></div>`;
+
+  root.innerHTML=`
+  <section class="step" data-step="1" hidden>
+    ${head(G,1,{learn:'A <b>KV-Cache vector</b> (the tutorial calls it a "note") is a list of numbers. Each number is one <b>dimension</b> of the vector: one detail that the model stored about a token. A few numbers are much larger than the others. These are <b>outliers</b>. <b>Rotate</b> mixes all the numbers, so the outliers spread across the full list.',do:['<b>Press Rotate.</b>','Watch the 4 outliers (the <span class="c-red">red marks</span>) in the KV-Cache vector (note).','Compare the vector before the rotation and after it.']})}
+    <div class="row"><button type="button" class="btn t" data-do="rot" data-test="ch3-rotate">Rotate</button></div>
+    <div class="race">
+      <div class="lane"><h2>Before Rotate</h2><div class="plotbox" data-plot="before"></div><p class="key" data-test="ch3-key-before">${KEY_OUT}The 4 red marks are the outliers.</p></div>
+      <div class="lane"><h2>After Rotate</h2><p class="empty" data-empty>Press Rotate to see the KV-Cache vector (note) after Rotate.</p><div class="plotbox" data-plot="after" hidden></div><p class="key" data-after-key data-test="ch3-key-after" hidden>${KEY_RING}Each dot now holds a small part of the 4 outliers.</p></div>
+    </div>
+    <p class="fine" data-test="ch3-dots">Each dot is one of the 64 numbers in the KV-Cache vector. The position of a dot shows its number. A dot near 0 is a small number. A dot far from 0, to the left or to the right, is a large number.</p>
+    ${what(1,`<p>Rotate mixed the 64 numbers of the KV-Cache vector (note). Each new number is a blend of all 64 old numbers, so the 4 outliers are now spread across the full vector.</p><p>The largest number went from ${f2(T.max[0])} to ${f2(T.max[1])}.</p><p>Rotate removed no information: TurboQuant can reverse the rotation and get the original numbers back exactly. The precision loss comes in the next step, Round.</p>`)}
+    ${navRow(G,1)}
+  </section>
+
+  <section class="step has-hint" data-step="2" hidden>
+    ${head(G,2,{learn:'<b>Rounding</b> (<b>quantization</b>) stores each number of the KV-Cache vector (note) in less GPU memory. A <b>bit</b> is the smallest unit of memory: one 0 or 1. The original number uses 16 bits. Round keeps only 3 bits, and 3 bits can name only 8 different values. So Round replaces each number with the closest of 8 <b>allowed values</b>.',do:['Drag each of the 3 numbers onto its closest allowed value. Or tap a number, then tap a value.','<b>Press Round the rest</b> to round the other 61 numbers.']})}
+    <div class="s1">
+      <div>
+        <div class="tb"><h2>The KV-Cache Vector After Rotate</h2>
+          <p class="tb-say">This is the KV-Cache vector (note) after Rotate: 64 numbers, spread around 0. Because of Rotate, 8 allowed values can cover all the numbers. This chart shows the dots without the red rings from Rotate.</p>
+          <div class="plotbox" data-plot="round"></div>
+          <p class="key">${KEY_LINE}Each dashed line is one allowed value.</p>
+          <p class="key">${KEY_PICK}The 3 blue dots are the numbers that you round.</p>
+          <p class="key" data-rest-key data-test="ch3-rest-key" hidden>${KEY_DOT}A gray dot is a number that the game rounded. Round does not mix the numbers, so no dot changes color.</p></div>
+        <p class="lab">The 8 Allowed Values and Their 3-Bit Codes</p>
+        <div class="vals" role="group" aria-label="Allowed values">${T.vals.map((v,k)=>`<button type="button" class="vtile" data-zone="val" data-v="${k}" data-test="ch3-val-${k}"><span class="vslot"></span><span>${f2(v)}</span><span class="vcode">${k.toString(2).padStart(3,'0')}</span></button>`).join('')}</div>
+        <p class="fine" data-test="ch3-codes">Under each allowed value is its 3-bit code. For each number, TurboQuant stores only this code.</p>
+        <p class="lab" data-test="ch3-rack-lab">The 3 Numbers to Round</p>
+        <div class="rack" data-zone="back"><div class="rack-tiles" data-rack role="group" aria-label="Numbers to round"></div><div class="rack-lip" aria-hidden="true"><span class="rack-back">Drop here to put it back</span></div></div>
+        <div class="row"><button type="button" class="btn t go" data-do="rest" disabled data-test="ch3-rest">Round the rest</button></div>
+      </div>
+      <div class="rule" data-rule data-test="ch3-rule" aria-live="polite"></div>
+    </div>
+    ${what(2,`<p>All 64 numbers in the KV-Cache vector (note) now sit on 1 of the 8 allowed values.</p><p>For each number, the model now stores a 3-bit code and not the 16-bit number. This vector went from ${64*16/8} bytes of GPU memory to ${64*3/8} bytes. <i>That is how TurboQuant saves memory!</i></p><p><b>The cost is precision</b>: each stored number is now a little different from the original. For example, ${NUMS[0].txt} became ${NUMS[0].to}.</p><p>The next step, Find the Error, measures how far each number moved.</p>`)}
+    ${navRow(G,2)}
+  </section>
+
+  <section class="step" data-step="3" hidden>
+    ${head(G,3,{learn:'The previous step, <b>Round</b>, moved each number in the KV-Cache vector (note) to an allowed value. The distance that a number moved is its <b>quantization error</b>. The model reads the rounded numbers each time it writes a new token. If the errors are small, the model finds the same earlier tokens and gives the same answer. If the errors are large, the model can read the wrong earlier tokens.',do:['<b>Press Compare.</b>','Look at the <span class="c-red">red lines</span>. A <span class="c-red">red line</span> shows how far the Round step moved a number, from its original value to its allowed value.','Find the longest <span class="c-red">red line</span>. A longer line means a larger error for that number.']})}
+    <div class="row"><button type="button" class="btn t" data-do="cmp" data-test="ch3-compare">Compare</button></div>
+    <div class="tb narrow"><h2>The Rounded KV-Cache Vector</h2><div class="plotbox" data-plot="gap"></div>
+      <p class="key">${KEY_LINE}<span>Each number sits on one of the 8 <b>allowed values</b>.</span></p>
+      <p class="key" data-gap-key hidden>${KEY_GAP}A red line is the quantization error of one number.</p></div>
+    ${what(3,`<p><b>On average, Round moved a number by ${f2(T.gap[0])}. The longest <span class="c-red">red line</span> is an error of ${f2(T.gap[1])}.</b></p><p>The average error is about ${TYP}% of a typical number in this KV-Cache vector (note). An error of ${TYP}% in one number sounds large.</p><p>But the model never uses one number alone. It combines all 64 numbers into one attention score, and the errors partly cancel out. In this toy, the attention score of the right vector changes by about ${SHIFT[2]}%.</p><p>Rotate is the reason. Without Rotate, the average error is ${f2(T.gapNoRot[0])}, and the attention score changes by about ${SHIFT[1]}%.</p><div class="row"><button type="button" class="btn t" data-do="norot" data-test="ch3-norot">Show without Rotate</button></div>`)}
+    <div class="race" data-norot tabindex="-1" data-test="ch3-norot-out" hidden>
+      <div class="lane"><h2>With Rotate</h2><p class="fine" data-test="ch3-with-note">(The same rounded KV-Cache vector as above, on a wider scale.)</p><div class="plotbox" data-plot="with"></div><p class="key">${KEY_GAP}Average error: ${f2(T.gap[0])}</p></div>
+      <div class="lane"><h2>Without Rotate</h2><p class="fine" data-test="ch3-without-note">(The same vector, rounded without Rotate, on the same scale.)</p><div class="plotbox" data-plot="without"></div><p class="key">${KEY_GAP}Average error: ${f2(T.gapNoRot[0])}</p></div>
+    </div>
+    <p class="fine" data-norot-say data-test="ch3-norot-say" hidden></p>
+    ${navRow(G,3)}
+  </section>
+
+  <section class="step" data-step="4" hidden>
+    ${head(G,4,{learn:'In TurboQuant, rounding makes a KV-Cache vector (note) slightly shorter. A shorter vector gives attention scores that are slightly too low. The scores are wrong in the same direction, so the errors do not cancel out. An error of this type is a <b>bias</b>. <b>Norm correction</b> stretches the vector back to its original length, which is called its <b>norm</b>.',do:['<b>Press Measure.</b> The game measures the length of the rounded vector.','<b>Press Compare.</b> The game shows the original length, which vLLM stored before Round.','<b>Press Stretch.</b> The game multiplies every number by one factor, and the vector gets its original length back.']})}
+    <div class="tb narrow bars"><h2>Length of This KV-Cache Vector</h2><div class="plotbox" data-plot="nc"></div>
+      <p class="key">${KEY_LINE}Each dashed line is one allowed value.</p>
+      <p class="key">${KEY_PICK}The 3 blue dots are the numbers that you rounded.</p>
+      <p class="key" data-ghost-key hidden>${KEY_GHOST}A ring shows where a dot was before Stretch. The dots far from 0 moved the most.</p>
+      <div class="row"><button type="button" class="btn t go" data-do="nc1" data-test="ch3-nc-1">Measure</button><button type="button" class="btn t go" data-do="nc2" disabled data-test="ch3-nc-2">Compare</button><button type="button" class="btn t go" data-do="nc3" disabled data-test="ch3-nc-3">Stretch</button></div>
+      <div class="bar-row"><p class="bar-lab">Length of the Vector (Its Norm)<span data-len data-test="ch3-len">Not measured</span></p>
+        <div class="ruler" aria-hidden="true">${[0,1,2,3,4].map(k=>`<span${k?` style="left:${k*25}%"`:''}>${(LO+k*0.2).toFixed(1)}</span>`).join('')}</div>
+        <div class="bar len" aria-hidden="true"><i class="f-notes" data-len-fill style="width:0"></i><b class="mark" data-len-mark style="left:${pct(T.len[0])}" hidden></b></div></div>
+      <p class="bar-sub">This bar shows only the lengths from ${LO.toFixed(1)} to ${HI.toFixed(1)}.</p>
+      <p class="key" data-mark-key hidden>${KEY_MARK}The gold line is the original length of the vector: ${LEN[0]}. vLLM stored this one number before Round.</p>
+      <div class="beats" data-test="ch3-beats">
+        <p data-beat="1" hidden><b>1. Measure.</b> Length after quantization (Round): ${LEN[1]}. The game squares each of the 64 numbers, adds the squares, and takes the square root.</p>
+        <p data-beat="2" hidden><b>2. Compare.</b> Original length: ${LEN[0]}. The vector is ${f2(T.len[0]-T.len[1])} too short (${SHORT}%).</p>
+        <p data-beat="3" hidden><b>3. Stretch.</b> ${LEN[0]} ÷ ${LEN[1]} = ${F.toFixed(2)}. The game multiplies each of the 64 numbers by ${F.toFixed(2)}, and the length is ${LEN[0]} again.</p>
+      </div></div>
+    ${what(4,`<p>Round made this KV-Cache vector (note) ${SHORT}% too short. A vector that is too short gives attention scores that are too low.</p><p>So norm correction multiplied every number in the vector by ${F.toFixed(2)}. The vector has its original length (norm) again: ${LEN[0]}.</p><p>The 3 numbers that you rounded:</p><table class="nums" data-test="ch3-nums"><thead><tr><th scope="col">Original</th><th scope="col">After Round<br>(closest allowed value)</th><th scope="col">After Norm Correction<br>(× ${F.toFixed(2)})</th></tr></thead><tbody>${NUMS.map(N=>`<tr><td>${N.txt}</td><td>${N.to}</td><td>${N.nc}</td></tr>`).join('')}</tbody></table><p data-test="ch3-example">Example: Round moved ${NUMS[0].txt} to ${NUMS[0].to}. Stretch multiplied ${NUMS[0].to} by ${F.toFixed(2)}, which gives ${NUMS[0].nc}.</p><p>Norm correction does not put each number back. It corrects only the length of the full vector.</p><p>The letters <code>nc</code> in the setting names <code>turboquant_4bit_nc</code> and <code>turboquant_k3v4_nc</code> mean norm correction.</p>`)}
+    <div class="race" data-fix data-test="ch3-fix" hidden>
+      <div class="lane" data-test="ch3-fix-paper"><h2>The Fix in the TurboQuant Research Paper: a Correction Mark</h2><p>The paper adds a tiny plus-or-minus correction mark to each KV-Cache vector (note). The small errors then cancel out.</p></div>
+      <div class="lane" data-test="ch3-fix-vllm"><h2>The Fix in vLLM: Norm Correction</h2><p>vLLM is the software in Chapter 4. Before Round, vLLM stores the length of each vector (the norm). After Round, it multiplies every number in the vector by one factor, and the vector gets its original length back.</p><p>Why vLLM does not use the correction mark: at least five independent groups found that the correction mark hurt answer quality. It adds small random errors, and the attention step of the model magnifies them.</p></div>
+    </div>
+    ${navRow(G,4)}
+  </section>
+
+  <section class="step" data-step="5" hidden>
+    ${head(G,5,{learn:'Each time the model writes a token, it looks back at the earlier tokens. Each earlier token has one KV-Cache vector (note). The model uses a <b>Query</b> to give each vector an <b>attention score</b>, and it reads the vector with the highest score. This search is one <b>lookup</b>. This test does 384 lookups with each method and counts the <b>misses</b>.',do:['<b>Press Test full vectors.</b> Each square in the grid is 1 lookup.','<b>Press Test Round only.</b> Look for the misses (the <span class="c-red">red squares</span>).','<b>Press Test Rotate + Round.</b> Compare the misses in the 3 grids.']})}
+    <p class="q">Can the model (the chef) still find the right KV-Cache vector (note)?</p>
+    <p class="lead">In each lookup, the model (the chef) looks for 1 earlier token among ${T.NK}.</p>
+    <div class="tests" data-scores>${TESTS.map(lane5).join('')}</div>
+    <p class="key">${KEY_HIT}A blue square is a lookup that found the right vector.</p>
+    <p class="key">${KEY_MISS}A red square with a cross is a miss: a wrong vector got the highest attention score, so the model reads a wrong earlier token.</p>
+    ${what(5,`<p><b>Round only missed ${MISS[1]} of the ${NQ} lookups. Rotate + Round missed ${MISS[2]}.</b></p><p>Rotate cut the misses from ${MISS[1]} to ${MISS[2]}. Both methods use 3 bits for each number.</p><p>How a miss happens: Round changed the numbers of each vector. Then a similar vector scored higher than the right one.</p><h2>Why This Matters</h2><p>Each time the model writes a token, it must find the earlier tokens that matter. A miss means that the model reads the wrong part of the conversation.</p><p>With Rotate + Round, the KV-Cache vectors (notes) use much less GPU memory, and the model still finds almost every one.</p><p>Chapter 5 of the tutorial tests this on the real model. Qwen finds a hidden password with and without TurboQuant, and the KV-Cache holds about 2.9 times more tokens.</p>`)}
+    <div class="endcard" data-end data-test="ch3-end" hidden></div>
+    ${navRow(G,5)}
+  </section>
+
+  <details class="fold" data-steps="1 2 3 4 5"><summary>Where the Numbers Come From</summary><ul>
+    <li>The numbers in this game are a toy example. This page makes ${T.NK} KV-Cache vectors (notes) of 64 numbers each. It does not use the real model.</li>
+    <li>In each toy vector, the page makes 4 of the 64 numbers 4 times larger. These 4 numbers are the outliers.</li>
+    <li>The TurboQuant research paper uses a random rotation. vLLM 0.20 and later uses a fixed rotation. vLLM rotates Keys only.</li>
+    <li>The toy rounds to 8 evenly spaced values for each vector. TurboQuant uses a list of values that is prepared ahead of time.</li>
+    <li>The game rounds to 3 bits. <code>turboquant_4bit_nc</code> uses 4 bits. <code>turboquant_k3v4_nc</code> uses 3 bits for Keys and 4 bits for Values. The original numbers use 16 bits.</li>
+    <li>At 3 bits, one toy vector goes from ${64*16/8} bytes to ${64*3/8} bytes. The real model does not give this ratio. The tutorial measures about 2.9 times more tokens in the KV-Cache with <code>turboquant_4bit_nc</code>.</li>
+    <li>A typical number in this vector is ${f2(T.typ)}. This is the average size of the 64 numbers, without the sign. The average error of ${f2(T.gap[0])} is ${TYP}% of ${f2(T.typ)}.</li>
+    <li>The change in the attention score is an average over the ${NQ} lookups. Each lookup compares the score of the right vector before Round and after Round.</li>
+    <li>In this toy, Round made this vector ${SHORT}% shorter. Other toy vectors change by ${String(RANGE[0]).replace('-','−')}% to +${RANGE[1]}%, because the toy uses evenly spaced values. With the list of values that TurboQuant prepares, a rounded vector is shorter on average.</li>
+    <li>In vLLM, norm correction applies to Keys only.</li>
+    <li>The real model reads many earlier tokens for each new token. The test checks only the vector with the highest attention score.</li>
+    <li>The test ignores the length of a vector. For this reason, norm correction does not change the results of the test in this game.</li>
+    <li>This page does not compute the correction mark. It shows norm correction, which is the fix that vLLM uses.</li>
+  </ul></details>`;
+
+  const starsNow=()=>[S.rot,S.rest,S.cmp,S.nc,S.test];
+  const award=()=>api.stars(starsNow());
+  const open=n=>{ const b=$(`[data-next="${n}"]`,root); b.disabled=false; if(!api.replaying) b.focus(); };
+  const show=n=>{ const w=$(`[data-what="${n}"]`,root); w.hidden=false; return $$('p',w).map(p=>p.textContent).join(' '); };
+  const smooth=()=>api.rm()?'auto':'smooth';
+  const into=el=>{ if(!api.replaying) el.scrollIntoView({block:el.getBoundingClientRect().height>innerHeight-28?'start':'nearest',behavior:smooth()}); };
+
+  const plots={
+    before:makePlot($('[data-plot="before"]',root),8,TK8),
+    after:makePlot($('[data-plot="after"]',root),8,TK8),
+    round:makePlot($('[data-plot="round"]',root),4.2,TK4),
+    nc:makePlot($('[data-plot="nc"]',root),4.2,TK4,true)};
+  const ROUND={vals:T.after,grid:T.vals,pick:PICK};
+  function gapChart(name,o){
+    const X=v=>plotX(v,o.M).toFixed(1), ord=[...o.vals.keys()].sort((a,b)=>o.vals[a]-o.vals[b]), h=o.hide?' data-gap hidden':'';
+    $(`[data-plot="${name}"]`,root).innerHTML=`<svg class="plot" viewBox="0 0 ${PLOT.W} ${PLOT.H}" role="img" aria-label="${o.label}">${o.grid.map(v=>`<line class="gl" x1="${X(v)}" x2="${X(v)}" y1="4" y2="${PLOT.H-4}"/>`).join('')}${ord.map((i,r)=>{
+      const y=(9+r*3.1).toFixed(1), a=X(o.vals[i]), b=X(o.rounded[i]);
+      return `<line class="gapl"${h} x1="${a}" x2="${b}" y1="${y}" y2="${y}"/><circle class="orig"${h} cx="${a}" cy="${y}" r="2.2"/><circle class="rdot" cx="${b}" cy="${y}" r="2.4"/>`;
+    }).join('')}</svg>${plotTicks(o.M,o.ticks)}`;
+  }
+  const WITH={vals:T.after,rounded:T.rounded,grid:T.vals};
+  gapChart('gap',{...WITH,M:4.2,ticks:TK4,hide:true,label:'The rounded KV-Cache vector. Each of the 64 numbers sits on one of the 8 allowed values.'});
+  gapChart('with',{...WITH,M:8,ticks:TK8,label:`The KV-Cache vector rounded with Rotate. The red lines are short. Average error: ${f2(T.gap[0])}.`});
+  gapChart('without',{vals:T.before,rounded:T.noRot.rounded,grid:T.noRot.vals,M:8,ticks:TK8,label:`The KV-Cache vector rounded without Rotate. The red lines are long. Average error: ${f2(T.gapNoRot[0])}.`});
+
+  /* step 1 */
+  function rotate(){
+    if(S.rot) return; S.rot=true;
+    const t=step(1);
+    $('[data-empty]',t).hidden=true; $('[data-plot="after"]',t).hidden=false; $('[data-after-key]',t).hidden=false;
+    $('[data-do="rot"]',t).disabled=true;
+    plots.after.set({vals:T.before,out:T.OUT,label:'The KV-Cache vector before Rotate.'},true);
+    api.later(()=>plots.after.set({vals:T.after,ring:true,label:'The KV-Cache vector after Rotate. Each dot holds a small part of the 4 outliers.'},api.rm()),80);
+    award();
+    api.later(()=>{ const said=show(1); open(2); api.say(said); },2000);
+  }
+
+  /* step 2 */
+  const syncSel=()=>$('.vals',root).classList.toggle('sel-on',!!$('[data-num][aria-pressed="true"]',root));
+  function renderRack(){
+    const left=NUMS.filter(n=>S.placed[n.i]===undefined);
+    $('[data-rack]',root).innerHTML=left.length
+      ?left.map(n=>`<button type="button" class="term" data-num="${n.i}" aria-pressed="false" data-test="ch3-num-${n.i}">${n.txt}</button>`).join('')
+      :'<p class="rack-done">All three numbers are rounded.</p>';
+    syncSel();
+  }
+  function card(kind,N,done){
+    let cls='', top='Drag a number from the brown rack.', body='';
+    if(kind==='start') body='<p data-test="ch3-start">The rack holds the 3 numbers that you round. Drop each one on its closest allowed value.</p>';
+    else if(kind==='sel') top=`Now tap the closest value for ${N.txt}.`;
+    else if(kind==='nosel') top='Tap a number in the rack first.';
+    else if(kind==='down') top='Put back. Pick any number.';
+    else if(kind==='wrong'){
+      const n=S.missed[N.i], h1='Round picks the allowed value that is closest to the number.', h2=`${N.txt} is between ${N.lo} and ${N.hi}. Look for the value that is closer.`;
+      cls='bad'; top='Not this one.';
+      body=`<div data-test="ch3-hint">${n===1?`<p>${h1}</p>`:n===2?`<p>${h2}</p>`:`<p>${h1}</p><p>${h2}</p><p><b>Try again.</b></p>`}</div>`;
+    }
+    else if(kind==='right'){
+      cls='good'; top=`Right: ${N.txt} becomes ${N.to}.`;
+      body=`<p data-why data-test="ch3-why">The number moved by ${N.gap}.</p>${done?`<p><b>All three numbers are rounded.</b> Now press Round the rest.</p><div class="row"><button type="button" class="btn t go${api.rm()?'':' pulse'}" data-do="rest" data-test="ch3-rest-card">Round the rest</button></div>`:''}`;
+    }
+    else if(kind==='rest'){
+      cls='good'; top='All 64 numbers are rounded.';
+      body='<p>You earned the star.</p>';
+    }
+    hintCard($('[data-rule]',root),cls,top,body);
+  }
+  function tryRound(d){
+    const N=NUMS.find(x=>x.i===d.n);
+    if(!N||S.rest||S.placed[N.i]!==undefined) return;
+    if(d.v!==N.k){
+      S.missed[N.i]=(S.missed[N.i]||0)+1; renderRack();
+      card('wrong',N); api.say('Not this one.');
+      if(!api.replaying){ const b=$(`[data-num="${N.i}"]`,root); if(b) b.focus({preventScroll:true}); }
+      return;
+    }
+    S.placed[N.i]=d.v;
+    const tile=$(`[data-v="${d.v}"]`,root);
+    $('.vslot',tile).innerHTML=`<span class="vnum" data-test="ch3-placed-${N.i}">${N.txt}</span>`;
+    tile.setAttribute('aria-label',`${N.to}, with ${N.txt} on it`);
+    renderRack();
+    const done=Object.keys(S.placed).length===NUMS.length, rest=$('[data-do="rest"]',root);
+    card('right',N,done); api.say(`Right: ${N.txt} becomes ${N.to}. The number moved by ${N.gap}.${done?' All three numbers are rounded. Now press Round the rest.':''}`);
+    if(done){ rest.disabled=false; if(!api.rm()) rest.classList.add('pulse'); }
+    if(!api.replaying){ const b=done?rest:$('[data-num]',root); if(b) b.focus({preventScroll:true}); }
+  }
+  function roundRest(){
+    if(S.rest||Object.keys(S.placed).length<NUMS.length) return; S.rest=true;
+    plots.round.set({...ROUND,idx:T.idx,label:'The rounded KV-Cache vector. Each of the 64 numbers sits on one of the 8 allowed values.'},api.rm());
+    const b=$('[data-do="rest"]',root); b.disabled=true; b.classList.remove('pulse');
+    $$('.vtile',root).forEach(v=>{ v.disabled=true; });
+    $('[data-rest-key]',root).hidden=false;
+    card('rest'); award();
+    api.later(()=>{ const said=show(2); open(3); api.say(`All 64 numbers are rounded. ${said}`); },2000);
+  }
+
+  /* step 3 */
+  function compare(){
+    if(S.cmp) return; S.cmp=true;
+    const t=step(3);
+    $$('[data-gap]',t).forEach(x=>x.removeAttribute('hidden'));
+    $('[data-plot="gap"] svg',t).setAttribute('aria-label','The rounded KV-Cache vector with a red line from each number to its allowed value.');
+    $('[data-gap-key]',t).hidden=false;
+    $('[data-do="cmp"]',t).disabled=true;
+    award(); const said=show(3); open(4);
+    api.say(said);
+  }
+  function noRotate(){
+    if(S.norot||!S.cmp) return; S.norot=true;
+    const t=step(3), c=$('[data-norot]',t), say=$('[data-norot-say]',t);
+    const [one,two]=matchMedia('(max-width:560px)').matches?['first','second']:['left','right'];
+    say.innerHTML=`Without Rotate (the ${two} chart), the 8 allowed values must stretch to reach the 4 outliers. Then ${TOP2} of the 64 numbers land on only 2 values, and the <span class="c-red">red lines</span> are long. With Rotate (the ${one} chart), the allowed values sit close together, and every <span class="c-red">red line</span> is short. The average error is ${f2(T.gap[0])} with Rotate and ${f2(T.gapNoRot[0])} without Rotate: about ${Math.round(T.gapNoRot[0]/T.gap[0])} times larger.`;
+    c.hidden=false; say.hidden=false; $('[data-do="norot"]',t).disabled=true;
+    if(!api.replaying){ c.focus({preventScroll:true}); say.scrollIntoView({block:'nearest',behavior:smooth()}); }
+    api.say(say.textContent);
+  }
+
+  /* step 4 */
+  const NCP={vals:T.rounded,grid:T.vals,idx:T.idx,pick:PICK};
+  function ncBeat(n){
+    if(S.ncb!==n-1) return; S.ncb=n;
+    const t=step(4), b=$(`[data-beat="${n}"]`,t);
+    const len=i=>{ $('[data-len]',t).textContent=LEN[i]; $('[data-len-fill]',t).style.width=pct(T.len[i]); };
+    b.hidden=false; $(`[data-do="nc${n}"]`,t).disabled=true;
+    if(n===1) len(1);
+    else if(n===2){ $('[data-len-mark]',t).hidden=false; $('[data-mark-key]',t).hidden=false; }
+    else{
+      S.nc=true; len(0); $('[data-ghost-key]',t).hidden=false;
+      plots.nc.set({...NCP,at:T.vals.map(v=>v*F),ghost:true,label:`The KV-Cache vector after norm correction. Every number is ${SHORT}% farther from 0.`},api.rm());
+      award();
+      api.later(()=>{ const said=show(4); $('[data-fix]',t).hidden=false; open(5); api.say(`${b.textContent} ${said}`); },2000);
+      return;
+    }
+    const nx=$(`[data-do="nc${n+1}"]`,t); nx.disabled=false;
+    if(!api.replaying) nx.focus({preventScroll:true});
+    api.say(b.textContent);
+  }
+
+  /* step 5 */
+  function runTest(k){
+    if(S.t[k]||(k&&S.t[k-1]<2)) return; S.t[k]=1;
+    const t=step(5), o=TESTS[k], lane=$(`[data-lane="${k}"]`,t), grid=$('[data-grid]',lane), cells=$$('i',grid), miss=new Set(T.miss[k]), say=$('[data-say]',lane);
+    let done=0, missed=0;
+    $(`[data-do="t${k+1}"]`,t).disabled=true; into(lane);
+    const paint=to=>{
+      for(;done<to;done++){ const m=miss.has(done); if(m) missed++; cells[done].className=m?'miss':'hit'; }
+      $('[data-found]',lane).textContent=`Found: ${done-missed} of ${NQ}`; $('[data-missed]',lane).textContent=`Misses: ${missed}`;
+    };
+    const end=()=>{
+      paint(NQ); S.t[k]=2; say.textContent=o.words;
+      const res=`${o.name}: found ${T.score[k]} of ${NQ}, misses ${MISS[k]}.`;
+      grid.setAttribute('aria-label',res);
+      if(k<2){
+        const nx=$(`[data-do="t${k+2}"]`,t); nx.disabled=false;
+        if(!api.replaying) nx.focus({preventScroll:true});
+        into($(`[data-lane="${k+1}"]`,t)); api.say(res); return;
+      }
+      S.test=true; award(); const said=show(5); api.finish(); endCard();
+      const w=$('[data-what="5"]',t), e=$('[data-end]',t);
+      if(e.getBoundingClientRect().bottom-w.getBoundingClientRect().top<=innerHeight-28) into(e);
+      else if(!api.replaying) w.scrollIntoView({block:'start',behavior:smooth()});
+      api.say(`${res} ${said}`);
+    };
+    if(api.rm()) return end();
+    const t0=performance.now(), DUR=4000;
+    (function tick(){
+      if(!root.isConnected) return;
+      const n=Math.min(NQ,Math.floor((performance.now()-t0)/DUR*NQ));
+      paint(n); say.textContent=`Lookup ${Math.min(n+1,NQ)} of ${NQ}`;
+      if(n<NQ) requestAnimationFrame(tick); else end();
+    })();
+  }
+  function endCard(){
+    const e=$('[data-end]',root);
+    e.innerHTML=`<p class="big">Game complete. Stars: ${starsNow().filter(Boolean).length} of 5.</p>
+      <p>Each note shrinks to a fraction of its original size, and the notes stay almost as accurate as before.</p>
+      <div class="row"><button type="button" class="btn t" data-again data-test="ch3-again">Play again</button><a class="btn next" href="#ch6/1" data-test="ch3-next-game">Next game: Ch 6 Setup for Daily Use</a></div>`;
+    e.hidden=false;
+  }
+
+  root.addEventListener('click',e=>{
+    if(justDragged) return;
+    const el=e.target.closest('button'); if(!el||el.disabled||!root.contains(el)) return;
+    if(['rot','rest','cmp','norot','nc1','nc2','nc3','t1','t2','t3'].includes(el.dataset.do)) api.do(el.dataset.do);
+  });
+  const drop=(el,z)=>{ if(z.dataset.v) api.do('try',{n:+el.dataset.num,v:+z.dataset.v}); };
+  enableDrag(root,'[data-num]','[data-zone="val"], [data-zone="back"]',drop,true);
+  enableTap(root,'[data-num]','[data-zone="val"]',drop,(kind,el)=>{ syncSel(); card(kind,el&&NUMS.find(n=>n.i===+el.dataset.num)); });
+
+  plots.before.set({vals:T.before,out:T.OUT,label:'The KV-Cache vector before Rotate. The 4 red marks are the outliers.'},true);
+  plots.round.set({...ROUND,label:'The KV-Cache vector after Rotate, with the 8 allowed values as dashed lines.'},true);
+  plots.nc.set({...NCP,label:'The rounded KV-Cache vector. Each of the 64 numbers sits on one of the 8 allowed values.'},true);
+  renderRack(); card('start');
+  return {
+    apply(type,d){
+      if(type==='rot') rotate();
+      else if(type==='try') tryRound(d);
+      else if(type==='rest') roundRest();
+      else if(type==='cmp') compare();
+      else if(type==='norot') noRotate();
+      else if(type==='nc'){ ncBeat(1); ncBeat(2); ncBeat(3); }
+      else if(/^nc[123]$/.test(type)) ncBeat(+type[2]);
+      else if(type==='test'){ runTest(0); runTest(1); runTest(2); }
+      else if(/^t[123]$/.test(type)) runTest(type[1]-1);
+    },
+    ready(){ award(); }
+  };
+}
+
+/* ================= Ch 6 · Setup for daily use ================= */
+function buildCh6(api){
+  const G=api.G, root=api.root;
+  const nf=n=>n.toLocaleString('en-US');
+  const C4='<code>turboquant_4bit_nc</code>', C3='<code>turboquant_k3v4_nc</code>';
+  const SETS=[
+    {k:'off',name:'TurboQuant Off',html:'TurboQuant Off',sub:'16 bits for each number',holds:38544,tps:77},
+    {k:'nc4',name:'turboquant_4bit_nc',html:C4,sub:'4 bits for each number',holds:112128,tps:61},
+    {k:'k3v4',name:'turboquant_k3v4_nc',html:C3,sub:'3 bits for Keys, 4 bits for Values',holds:121984,tps:45}];
+  const [OFF,NC4,K3]=SETS, MAX=K3.holds;
+  const SITS=[
+    {need:2000,right:'off',
+      text:'You ask a few short questions in one chat. The chat needs about 2,000 tokens in the KV-Cache (the stack of notes).',
+      learn:'A <b>TurboQuant setting</b> is a trade. A stronger setting gives the KV-Cache (the stack of notes) <b>room for more tokens</b>, but the model <b>writes fewer tokens per second</b>. So the rule is: pick the fastest setting that fits.',
+      why:`2,000 tokens fit in ${nf(OFF.holds)} tokens, and no setting is faster.`,
+      what:`<p>The chat needs 2,000 tokens. That is about ${Math.round(2000/OFF.holds*100)}% of the room in the KV-Cache (the stack of notes) with TurboQuant Off.</p><p>All 3 settings fit, so speed decides. With TurboQuant Off, the model writes ${OFF.tps} tokens per second. With ${C3}, it writes ${K3.tps}.</p><p><b>In practice:</b> for short chats, leave TurboQuant off. A TurboQuant setting gives room that the chat does not use, and the answers come more slowly.</p>`},
+    {need:30000,right:'off',
+      text:'You load one long report and ask questions about it. The chat needs about 30,000 tokens in the KV-Cache (the stack of notes).',
+      learn:'A long chat does not always need TurboQuant. With <b>TurboQuant Off</b>, the KV-Cache on a 16 GB graphics card holds about <b>38,500 tokens</b>. Work below this limit runs fastest without TurboQuant.',
+      why:`30,000 tokens still fit in ${nf(OFF.holds)} tokens, and no setting is faster.`,
+      what:`<p>The chat needs 30,000 tokens, and the KV-Cache holds ${nf(OFF.holds)} tokens with TurboQuant Off. The chat still fits.</p><p><b>In practice:</b> Chapter 5 of the tutorial tests a text of 25,000 tokens. A 16 GB graphics card holds that much without TurboQuant. TurboQuant helps when the work needs more than about 38,500 tokens.</p>`},
+    {need:90000,right:'nc4',
+      text:'You run 3 chats at the same time. Each chat holds one long report and needs about 30,000 tokens. The total is 90,000 tokens.',
+      learn:'Chats that run at the same time <b>share one KV-Cache</b>, so their tokens add up. When the total is more than about 38,500 tokens, the work needs a TurboQuant setting.',
+      why:`90,000 tokens fit in ${nf(NC4.holds)} tokens. The other setting that fits is slower.`,
+      what:`<p>The 3 chats share one KV-Cache, so they need 90,000 tokens together. TurboQuant Off holds ${nf(OFF.holds)} tokens, so it does not fit.</p><p>${C4} holds ${nf(NC4.holds)} tokens: about ${(NC4.holds/OFF.holds).toFixed(1)} times more. ${C3} also fits, but the model writes ${K3.tps} tokens per second with it, not ${NC4.tps}.</p><p><b>In practice:</b> this is the setting for daily use. Chapter 6 of the tutorial turns it on with one flag: <code class="nw">--kv-cache-dtype</code> <code class="nw">turboquant_4bit_nc</code>.</p>`}];
+  const DO=['Read the situation. Find how many tokens it needs.','Look at the gold line on each setting. A setting fits when its bar reaches the gold line.','Drag the fastest setting that fits onto the situation. Or tap a setting, then tap the situation.'];
+  const KEY_MARK='<svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true" focusable="false"><rect x="4.5" y="0.75" width="5" height="12.5" fill="#E9B44C" stroke="#1E1A16" stroke-width="1.5"></rect></svg>';
+  const KEY_BAR='<svg width="24" height="14" viewBox="0 0 24 14" aria-hidden="true" focusable="false"><rect y="2" width="24" height="10" fill="#5F3C1B"></rect></svg>';
+  const S={done:{},miss:{}};
+  const step=n=>$(`.step[data-step="${n}"]`,root);
+  const pc=v=>(v/MAX*100).toFixed(1)+'%';
+  const tile=(o,n,sit)=>`<button type="button" class="term set" data-set="${o.k}" aria-pressed="false" data-test="ch6-set-${n}-${o.k}"><span class="set-top"><span class="set-name">${o.html}</span><span class="set-sub">${o.sub}</span></span><span class="bar" aria-hidden="true"><i class="f-notes" style="width:${pc(o.holds)}"></i><b class="mark" style="left:${pc(sit.need)}"></b></span><span class="set-facts"><span>Holds ${nf(o.holds)} tokens</span><span>Writes ${o.tps} tokens per second</span></span></button>`;
+
+  root.innerHTML=SITS.map((sit,i)=>{ const n=i+1; return `
+  <section class="step has-hint" data-step="${n}" hidden>
+    ${head(G,n,{learn:sit.learn,do:DO})}
+    <p class="q" data-test="ch6-rule-line">Pick the fastest setting that fits.</p>
+    <div class="s1">
+      <div>
+        <div class="tb sit" data-zone="sit" data-test="ch6-sit-${n}"><h2>The Situation</h2>
+          <p data-test="ch6-sit-text">${sit.text}</p>
+          <p class="key">${KEY_MARK}<b data-test="ch6-need">Needs: ${nf(sit.need)} tokens</b></p>
+          <button type="button" class="sitslot" data-zone="sit" data-drop data-test="ch6-slot-${n}">Drop a setting here</button></div>
+        <p class="lab">The 3 Settings</p>
+        <div class="rack setrack"><div class="rack-tiles" role="group" aria-label="Settings">${SETS.map(o=>tile(o,n,sit)).join('')}</div><div class="rack-lip" aria-hidden="true"></div></div>
+        <p class="key">${KEY_BAR}<span>The brown bar is the room in the KV-Cache (the stack of notes) with this setting.</span></p>
+        <p class="key">${KEY_MARK}<span>The gold line is the tokens that the situation needs. A setting fits when its bar reaches the gold line.</span></p>
+      </div>
+      <div class="rule" data-rule data-test="ch6-rule-${n}" aria-live="polite"></div>
+    </div>
+    <div class="verdict good what" data-what="${n}" data-test="ch6-what-${n}" hidden><h2>What Happened</h2>${sit.what}</div>
+    ${n===3?'<div class="endcard" data-end data-test="ch6-end" hidden></div>':''}
+    ${navRow(G,n)}
+  </section>`; }).join('')+`
+  <details class="fold" data-steps="1 2 3"><summary>Where the Numbers Come From</summary><ul>
+    <li>The token counts come from <code>verify.py</code> on an RTX 5080 graphics card (16 GB), with <code class="nw">--gpu-memory-utilization 0.85</code>.</li>
+    <li>Your counts can differ by about 10%. In Chapter 6 of the tutorial, the vLLM server shows room for 120,000 tokens with ${C4}.</li>
+    <li>The speeds were measured with about 16,000 tokens in the KV-Cache.</li>
+    <li>The vLLM authors measured the answer quality. Perplexity went up 2.71% with ${C4} and 10.63% with ${C3}. Perplexity scores how well a model predicts text. A larger increase means that the answers move farther from the model without TurboQuant.</li>
+    <li>Each chat stays below 32,768 tokens. This is the <code class="nw">--max-model-len</code> value in Chapter 6 of the tutorial.</li>
+    <li>The 3 situations are examples. The tutorial does not measure them.</li>
+  </ul></details>`;
+
+  const award=()=>api.stars([1,2,3].map(n=>!!S.done[n]));
+  const smooth=()=>api.rm()?'auto':'smooth';
+  const into=el=>{ if(!api.replaying) el.scrollIntoView({block:el.getBoundingClientRect().height>innerHeight-28?'start':'nearest',behavior:smooth()}); };
+  const syncSel=n=>$('.sit',step(n)).classList.toggle('sel-on',!!$('[data-set][aria-pressed="true"]',step(n)));
+  function card(n,kind,o){
+    const sit=SITS[n-1]; let cls='', top='Drag a setting onto the situation.', body='';
+    if(kind==='start') body='<p data-test="ch6-start">Use the rule: pick the fastest setting that fits.</p>';
+    else if(kind==='sel') top='Now tap the situation.';
+    else if(kind==='nosel') top='Tap a setting first.';
+    else if(kind==='down') top='Put back. Pick any setting.';
+    else if(kind==='wrong'){
+      const why=o.holds<sit.need
+        ?`This setting does not fit. The situation needs ${nf(sit.need)} tokens, and ${o.html} holds ${nf(o.holds)} tokens.`
+        :`This setting fits, but a faster setting also fits. With ${o.html}, the model writes ${o.tps} tokens per second.`;
+      cls='bad'; top='Not this one.';
+      body=`<div data-test="ch6-hint"><p>${why}</p>${S.miss[n]>1?'<p>Look for the fastest setting whose bar reaches the gold line.</p>':''}</div>`;
+    }
+    else if(kind==='right'){
+      cls='good'; top=`Right: ${o.name}.`;
+      body=`<p data-test="ch6-why">${sit.why}</p><p>You earned the star.</p>`;
+    }
+    hintCard($('[data-rule]',step(n)),cls,top,body);
+  }
+  function endCard(){
+    const e=$('[data-end]',root);
+    e.innerHTML=`<p class="big">Game complete. Stars: ${[1,2,3].filter(n=>S.done[n]).length} of 3.</p>
+      <h2>Why ${C3} Never Won</h2>
+      <p>${C3} is the strongest setting. It holds about ${Math.round((K3.holds/NC4.holds-1)*100)}% more tokens than ${C4}. But the model writes more slowly with it, and its answers move farther from the model without TurboQuant. Use it only when the work fits in no other setting.</p>
+      <div class="row"><button type="button" class="btn t" data-again data-test="ch6-again">Play again</button><a class="btn next" href="verify-game.html" data-test="ch6-extra">Extra game: Is It Actually On?</a></div>`;
+    e.hidden=false;
+  }
+  function tryPick(d){
+    const n=d.s, sit=SITS[n-1], o=SETS.find(x=>x.k===d.k);
+    if(!sit||!o||S.done[n]) return;
+    const t=step(n), slot=$('[data-drop]',t);
+    if(o.k!==sit.right){
+      S.miss[n]=(S.miss[n]||0)+1; syncSel(n);
+      card(n,'wrong',o); api.say('Not this one.');
+      if(!api.rm()){ slot.classList.remove('shake'); void slot.offsetWidth; slot.classList.add('shake'); }
+      if(!api.replaying) $(`[data-set="${o.k}"]`,t).focus({preventScroll:true});
+      return;
+    }
+    S.done[n]=true;
+    $$('[data-set]',t).forEach(b=>{ b.disabled=true; b.setAttribute('aria-pressed','false'); b.classList.toggle('won',b===$(`[data-set="${o.k}"]`,t)); });
+    syncSel(n);
+    slot.innerHTML=`${ICON.check}<span data-test="ch6-placed-${n}">${o.html}</span>`; slot.classList.add('ok'); slot.disabled=true;
+    slot.setAttribute('aria-label',`${o.name} is on the situation`);
+    card(n,'right',o); award();
+    api.later(()=>{
+      const w=$(`[data-what="${n}"]`,t); w.hidden=false;
+      const said=$$('p',w).map(p=>p.textContent).join(' ');
+      if(n<SITS.length){ const b=$(`[data-next="${n+1}"]`,root); b.disabled=false; if(!api.replaying) b.focus(); }
+      else{
+        api.finish(); endCard();
+        const e=$('[data-end]',t);
+        if(e.getBoundingClientRect().bottom-w.getBoundingClientRect().top<=innerHeight-28) into(e);
+        else if(!api.replaying) w.scrollIntoView({block:'start',behavior:smooth()});
+      }
+      api.say(said);
+    },2000);
+  }
+
+  const drop=el=>api.do('pick',{s:+el.closest('.step').dataset.step,k:el.dataset.set});
+  enableDrag(root,'[data-set]','[data-zone="sit"]',drop,true);
+  enableTap(root,'[data-set]','[data-zone="sit"]',drop,(kind,el)=>{
+    const n=+$('.step:not([hidden])',root).dataset.step;
+    if(S.done[n]) return;
+    syncSel(n); card(n,kind);
+  });
+  SITS.forEach((_,i)=>card(i+1,'start'));
+  return {
+    apply(type,d){ if(type==='pick') tryPick(d); },
+    ready(){ award(); }
   };
 }
 
